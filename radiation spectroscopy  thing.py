@@ -53,19 +53,12 @@ class photon:
         # for i in range(1000):
         #     position = [i*dx+x,i*dy+y,i*dz+z]
         #     arraytrace.append(position)
-        vector = [dx, dy, dz]
-        origin = sy.Point3D(x, y, z)
-        path = sy.Ray(origin, direction_ratio=vector)
-        return path
-        # while abs(x) < 1000 and abs(y) < 1000 and abs(z) < 1000: #creating an arbitrary box of 2000x2000x2000 mm^3 for out of bounds. Will tweak this later, but it just exists now to avoid particle leakage
-        #     x += c*dt*np.cos(theta)*np.cos(phi)
-        #     y += c*dt*np.sin(theta)*np.cos(phi)
-        #     z += c*dt*np.sin(phi)
-        #     position = [x, y, z]
-        #     arraytrace.append(position)
-        #     #Creating an array for each incrimental position along the particle's track. This is very time expensive
-        # return arraytrace
-        
+        # vector = [dx, dy, dz]
+        # origin = sy.Point3D(x, y, z)
+        # path = sy.Ray(origin, direction_ratio=vector)
+        # return path
+        return x, y, z, dx, dy, dz
+
 class NaITl:
     def __init__(self, x, y, z, X, Y, Z):
         #Lowercase are the minumum bound position and uppercase are the dimensions
@@ -76,36 +69,54 @@ class NaITl:
         self.X = X
         self.Y = Y
         self.Z = Z
-    def position(self):
-        #Going to try using planes to define the geometry of the detector
-        x = self.x
-        y = self.y
-        z = self.z
-        X = self.X
-        Y = self.Y
-        Z = self.Z#This only works for a cuboidal structure
-        vrt1 = (x, y, z)
-        vrt2 = (x + X, y, z)
-        vrt3 = (x, y + Y, z)
-        vrt4 = (x + X, y + Y, z)
-        vrt5 = (x, y, z+Z)
-        vrt6 = (x + X, y, z+Z)
-        vrt7 = (x, y + Y, z+Z)
-        vrt8 = (x + X, y + Y, z+Z)
-        print(vrt1)
-        plane1 = sy.geometry.polygon.Polygon(vrt1, vrt2, vrt4, vrt3)#POLYGON DOESNT WORK WITH 3D POINTS OKAYYYY BUT PLANES ARE INFINITE
-        plane2 = sy.geometry.polygon.Polygon(vrt1, vrt2, vrt6, vrt5)
-        plane3 = sy.geometry.polygon.Polygon(vrt1, vrt3, vrt5, vrt7)
-        plane4 = sy.geometry.polygon.Polygon(vrt3, vrt4, vrt7, vrt8)
-        plane5 = sy.geometry.polygon.Polygon(vrt2, vrt4, vrt6, vrt8)
-        plane6 = sy.geometry.polygon.Polygon(vrt5, vrt6, vrt7, vrt8)
-        return plane1, plane2, plane3, plane4, plane5, plane6
+    # def planes(self):  #OBSOLETE
+    #     #Going to try using planes to define the geometry of the detector
+    #     x = self.x
+    #     y = self.y
+    #     z = self.z
+    #     X = self.X
+    #     Y = self.Y
+    #     Z = self.Z#This only works for a cuboidal structure
+    #     vrt1 = (x, y, z)
+    #     vrt2 = (x + X, y, z)
+    #     vrt3 = (x, y + Y, z)
+    #     vrt4 = (x + X, y + Y, z)
+    #     vrt5 = (x, y, z+Z)
+    #     vrt6 = (x + X, y, z+Z)
+    #     vrt7 = (x, y + Y, z+Z)
+    #     vrt8 = (x + X, y + Y, z+Z)                          #Using slab method
+    #     xyc = sy.Plane(vrt1, vrt2, vrt3)#XY plane close
+    #     xyf = sy.Plane(vrt5, vrt6, vrt7)#XY plane far
+    #     xzc = sy.Plane(vrt1, vrt2, vrt6)#XZ plane close
+    #     xzf = sy.Plane(vrt3, vrt8, vrt7)#XZ plane far
+    #     yzc = sy.Plane(vrt1, vrt3, vrt5)#ZY plane close
+    #     yzf = sy.Plane(vrt2, vrt4, vrt6)#ZY plane far
 
+    #     return xyc, xyf, xzc, xzf, yzc, yzf
+    def position(self):
+        xc = self.x
+        yc = self.y
+        zc = self.z
+        xf = self.X + xc
+        yf = self.Y + yc
+        zf = self.Z + zc
+        return xc, yc, zc, xf, yf, zf
 
 def Detection(detector, particle):#The "detector" argument takes a list of planes for a detector
-    for i in range(len(detector)):
-        intr = detector[i].intersection(particle.raytrace())
-        print(intr)
+    #planes = detector.planes()
+    bounds = detector.position()
+    ray = particle.raytrace()
+    distc = []
+    distf = []
+    for i in range(3):
+        distc.append((bounds[i]-ray[i])/ray[i+3])
+        distf.append((bounds[i+3]-ray[i])/ray[i+3])
+        #intr = planes[i].intersection(particle.raytrace()) #this is p(t)
+    tclose = max(distc)
+    tfar = min(distf)
+    if tclose <= tfar:
+        detection =1
+        #print(intr)
     # for i in range(len(particle.raytrace())):
     #     if detector.position()[0] < particle.raytrace()[i][0] < detector.position()[0] + detector.position()[3] and detector.position()[1] < particle.raytrace()[i][1] < detector.position()[1] + detector.position()[4] and detector.position()[2] < particle.raytrace()[i][2] < detector.position()[2] + detector.position()[5]: 
     #          #cross checking each term in the array arraytrace against the detector's coordinates. This is incredibly inefficient
@@ -113,15 +124,15 @@ def Detection(detector, particle):#The "detector" argument takes a list of plane
     #          break
     #     else:
     #         detection = 0
-    
-    detection = 0
+    else:
+        detection = 0
     return detection
 
 #Creating the detector once to avoid creating it 1000 times
 detector = NaITl(100, 100, 0, 300, 300, 300)
-planes = detector.position()
+#planes = detector.planes()
 
-for i in range(1000):
+for i in range(100000):
     #Randomly generated angles however, it will be generating a duplicate for 0 & 2pi, I could find a solution for this (go up to 2pi-1x10^-16 for flt16)
     theta = rd.uniform(0, 2*np.pi)
     phi = rd.uniform(-np.pi/2, np.pi/2)
@@ -133,6 +144,6 @@ for i in range(1000):
     #position at 0 0 0 since for now all photons are originating at the origin of the source
     photons.append(Photon.raytrace())
     #Need to figure out sleep command so that it actually generates particles in a set timeframe. Also, the particles shouldn't be equally spaced out time-wise, they're supposed to represent a randomly disintegrating source
-    detected += Detection(planes, Photon)
+    detected += Detection(detector, Photon)
 
 print(detected)
