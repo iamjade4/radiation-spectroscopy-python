@@ -21,22 +21,19 @@ class NaITl(IDetector):
             self.z + self.Z
         )
 
-    def detects(self, particle: IParticle):
-        x0, y0, z0 = particle.get_origin()
-        dx, dy, dz = particle.get_direction()
+        
+    def detects_batch(self, origins, directions):
         xc, yc, zc, xf, yf, zf = self._bounds
+        bound_min = np.array([xc, yc, zc])
+        bound_max = np.array([xf, yf, zf])
 
-        distc = []
-        distf = []
-        for origin, bound, direction in zip((x0, y0, z0), (xc, yc, zc), (dx, dy, dz)):
-            distc.append((bound - origin) / direction) if direction != 0 else None
-        for origin, bound, direction in zip((x0, y0, z0), (xf, yf, zf), (dx, dy, dz)):
-            distf.append((bound - origin) / direction) if direction != 0 else None
+        with np.errstate(divide='ignore', invalid='ignore'):
+            t_min = (bound_min - origins) / directions
+            t_max = (bound_max - origins) / directions
 
-        if not distc or not distf:
-            return False
-
-        tclose = max(distc)
-        tfar = min(distf)
-
+        t_min = np.where(directions == 0, -np.inf, t_min)
+        t_max = np.where(directions == 0, np.inf, t_max)
+        tclose = np.max(t_min, axis=1)
+        tfar = np.min(t_max, axis=1)
+        
         return tclose <= tfar
