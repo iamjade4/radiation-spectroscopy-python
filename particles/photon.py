@@ -16,14 +16,18 @@ class photon(IParticle):
         self._dx, self._dy, self._dz = self._calculate_direction()
 
     def _calculate_direction(self):
-        if self.pz < 0:
+        if self.pz < 0 and self.pz != 0:
             dz = -1
             dx = -np.cos(self.theta) * np.cos(self.phi) / np.sin(self.phi)
             dy = -np.sin(self.theta) * np.cos(self.phi) / np.sin(self.phi)
-        else:
+        elif self.pz != 0:
             dz = 1
             dx = np.cos(self.theta) * np.cos(self.phi) / np.sin(self.phi)
             dy = np.sin(self.theta) * np.cos(self.phi) / np.sin(self.phi)
+        else:
+            dz = 0
+            dx = np.cos(self.theta) * np.cos(self.phi)
+            dy = np.sin(self.theta) * np.cos(self.phi) #Un-normalised for the rare case of phi=0
         return dx, dy, dz
 
     def get_origin(self):
