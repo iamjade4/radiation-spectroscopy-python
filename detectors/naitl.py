@@ -1,6 +1,8 @@
 import numpy as np
 from interfaces import IDetector, IParticle
 from particles.photon import photon
+electrons = []
+fano = 1 #This is intrinsic to scintillators in general, so will be defined here. Maybe if I make a parent class of Scintillator I could provide it there as the Fano factor tends to be 1 for all scintillators
 
 class NaITl(IDetector):
     def __init__(self, x, y, z, X, Y, Z):
@@ -13,6 +15,7 @@ class NaITl(IDetector):
         self.Y = Y
         self.Z = Z
         self._bounds = self._calculate_bounds()
+        self.fano = fano #This allows multiple detector types to be called at once by removing the need for fano to remain a single value, it is now inherent to the detector's instance
 
     def _calculate_bounds(self):
         return (
@@ -49,29 +52,11 @@ class NaITl(IDetector):
         tclose_det = np.where(tclose <= tfar, tclose, None)
         for i in range(100000):
             if tclose[i] <= tfar[i]:
-                electron = (photon.photoelectric(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i]))      
+                electron_E = (photon.photoelectric(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano))  
+                electrons.append(round(electron_E)) #rounding to an int here. Realistically, it will just be put into a channel number for spectroscopy but rounding is easiest for now
 
-        #print(positions)    
-        return tclose <= tfar
-    
-    # def calculate_angles(self):
-    #     dO = (self.x, self.y, self.z) #Vector to the technical "origin" of the detector (Closest vertex to the universal origin)
-    #     dx = (self.x + self.X, self.y, self.z) 
-    #     dy = (self.x, self.y + self.Y, self.z)
-    #     dz = (self.x, self.y, self.z + self.Z)
-    #     dxy = (self.x + self.X, self.y + self.Y, self.z)
-    #     dxz = (self.x + self.X, self.y, self.z + self.Z)
-    #     dyz = (self.x, self.y + self.Y, self.z + self.Z)
-    #     dxyz = (self.x + self.X, self.y + self.Y, self.z + self.Z)
-    #     vectors = np.array([dO, dx, dy, dz, dxy, dxz, dyz, dxyz])
-    #     angles = []
-    #     #calculate angles to universal origin:
-    #     for i in vectors:
-    #         angles[i] = (np.arctan(vectors[i][0]/vectors[i][1]), np.arcsin(vectors[i][2])) #array of theta, phi for each vector
-    #     #The minimum phi angle will always be the one to dx (or dxy) and the maximum will be the one to dz
-    #     #The min theta will be to d0 and the max will be dy
-    #     #If minphi<phi<maxphi and mintheta<theta<maxtheta then, for a cuboid, any combination of phi and theta meeting these requirements should lay on the surface of the cuboid
+        #print(positions)
         
-        
+        return tclose <= tfar, electrons #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
             
         

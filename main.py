@@ -3,12 +3,15 @@ import numpy as np
 from particles.photon import photon
 from detectors.naitl import NaITl
 from particles.electron import electron
+import matplotlib.pyplot as plt
 
 E = 662 #Energies are in keV, natural units are assumed, distances are in mm for the time being (for the sake of dimensions of detectors)
 #1eV = 1.66e10-19J
 
 #Creating the detector once to avoid creating it 1000 times
-detector = NaITl(100, 100, 0, 300, 300, 300)
+energies = []
+
+detector = NaITl(100, 100, 0, 60, 60, 60) #Recently changed this to be 6x6x6 cm to be more realistic. Expect much smaller detection counts
 detected = 0
 
 n_photons = 10_000_000 # number of photons. also you can insert _ in a number without issue to break it up in python
@@ -25,8 +28,15 @@ for i in range(0, n_photons, batch_size):
     origins = np.zeros((batch_size, 3))  # assumes they all have the same origin of 0 0 0
     
     # DETECT THAT BATCH!!
-    mask = detector.detects_batch(origins, directions, theta, phi, E)
+    returns = detector.detects_batch(origins, directions, theta, phi, E)
+    
+    mask = returns[0] #This is the bulk of bool (BULK OF BOOL!!!) ie number of detections in this batch
     detected += np.sum(mask)
     batch_detected = np.sum(mask)
-
+energies = returns[1][:]  #Now you may think that this just sets energies to be the final batch's energies but no. Somehow somewhy this does create an array of energies of {detected} length
+                            #Ohhh its bc im appending the energies in naitl to its own list, and it's bringing this back everytime instead of resetting it. This could maybe cause issues in the future
 print(detected)
+
+fig, ax = plt.subplots()
+ax.hist(energies, bins=1024, range=[0,1000], histtype='step')
+plt.show()

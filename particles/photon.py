@@ -42,7 +42,7 @@ class photon(IParticle):
         return (self._dx, self._dy, self._dz)
         
     
-    def photoelectric(thetas, phis, energy, x, y, z, t): #photons will have a chance to undergo the photoelectric effect when detected. They create an electron with the same energy as the incident photon (-the binding energy but that is negligible so will be ignored for now)
+    def photoelectric(thetas, phis, energy, x, y, z, t, fano): #photons will have a chance to undergo the photoelectric effect when detected. They create an electron with the same energy as the incident photon (-the binding energy but that is negligible so will be ignored for now)
         cos_theta = np.cos(thetas)
         sin_theta = np.sin(thetas)
         cos_phi = np.cos(phis)
@@ -52,7 +52,7 @@ class photon(IParticle):
         py_e = P_e * sin_theta * cos_phi
         pz_e = P_e * sin_phi
         photoelectron = electron(px_e, py_e, pz_e, thetas, phis, x, y, z, t) #This is assuming that the electron recoils in the same direction as the photon. In reality it will be more complex but I will come to that later
-        print(photoelectron.get_energy())
+        return photoelectron.get_energy(fano)
         
         
         

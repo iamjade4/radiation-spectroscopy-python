@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from interfaces import IParticle
+import random as rd
 m_e = 511
 class electron(IParticle):
     def __init__(self, px, py, pz, theta, phi, x, y, z, t):
@@ -16,8 +17,10 @@ class electron(IParticle):
         self.m = m_e
         self._dx, self._dy, self._dz = self._calculate_direction()
         
-    def get_energy(self):
-        return (self.px**2 + self.py**2 + self.pz**2)/(2*self.m)
+    def get_energy(self, fano):
+        true_energy = (self.px**2 + self.py**2 + self.pz**2)/(2*self.m)
+        sigma = math.sqrt(true_energy) * fano #The true standard deviation for a poisson (or gaussian) dist is the square root of the mean. However, creating charge carriers/exciting atoms in a scintillator crystal has less variation than would be predicted by a poisson distribution. Fortunately, the deviation from this exected standard deviation is defined by the fano factor-an inherent quality for each detector.
+        return rd.gauss(true_energy, sigma)
     def _calculate_direction(self):
         if self.pz < 0:
             dz = -1
