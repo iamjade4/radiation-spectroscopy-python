@@ -4,8 +4,16 @@ from particles.photon import photon
 from detectors.naitl import NaITl
 from detectors.si import Si
 from particles.electron import electron
+import matplotlib
 import matplotlib.pyplot as plt
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout
+import sys
+#matplotlib.use('Qt5Agg')
 
+#class MainWindow(QMainWindow):#does this go here idk how pyqt works    
+#    def __init__(self, *args, **kwargs):
+#        super().__init__(*args, **kwargs)
+        
 E = 662 #Energies are in keV, natural units are assumed, distances are in mm for the time being (for the sake of dimensions of detectors)
 #1eV = 1.66e10-19J
 
@@ -19,6 +27,9 @@ detected2 = 0
 
 n_photons = 10_000_000 # number of photons. also you can insert _ in a number without issue to break it up in python
 batch_size = 100_000 # size per batch (i usually do ~10% of photons but its kind of up to you and your memory, at 10m i do 1% so 100k)
+#layout = QVBoxLayout()
+#widget = QWidget()
+#widget.setLayout(layout)
 
 for i in range(0, n_photons, batch_size):
     batch_detected1 = 0
@@ -41,10 +52,23 @@ for i in range(0, n_photons, batch_size):
     mask2 = returns[1][0]
     detected2 += np.sum(mask2)
     batch_detected2 = np.sum(mask2)
-energies = np.concatenate((returns[0][1][:], returns[1][1][:]))#This is giving energy two different arrays, one for each detector. I will combine them just to superimpose the spectra into a single output, but realistically they should remain separate and have separate outputs
+#energies = np.concatenate((returns[0][1][:], returns[1][1][:]))#This is giving energy two different arrays, one for each detector. I will combine them just to superimpose the spectra into a single output, but realistically they should remain separate and have separate outputs
            #Concatenate combines the two arrays                         
+energies = returns[0][1][:], returns[1][1][:]
 print(detected1, detected2)
 
-fig, ax = plt.subplots()
-ax.hist(energies, bins=1024, range=[0,1000], histtype='step')
+i = len(energies)#number of detectors
+fig, axs = plt.subplots(i)
+for i in range(i):
+    axs[i].hist(energies[i], bins=1024, range=[0,1000], histtype='step')#splitting into i different figures for each detector
 plt.show()
+        
+#        layout.addWidget(fig) #dont work 
+#        self.setCentralWidget(widget)
+
+#        self.show()
+
+
+#app = QApplication(sys.argv)
+#w = MainWindow()
+#app.exec_()

@@ -52,7 +52,11 @@ class NaITl(IDetector):
         tclose_det = np.where(tclose <= tfar, tclose, None)
         for i in range(100000):
             if tclose[i] <= tfar[i]:
-                electron_E = (photon.photoelectric(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano))  
+                random = np.random.rand()
+                if random <= 0.5:
+                    electron_E = (photon.photoelectric(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano))  
+                else:
+                    electron_E = (photon.comptonscatter(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano)) #This makes it a 50/50 between making a photoelectron and a compton electron. This is not physical because I Am Tired
                 electrons.append(round(electron_E)) #rounding to an int here. Realistically, it will just be put into a channel number for spectroscopy but rounding is easiest for now
 
         #print(positions)
