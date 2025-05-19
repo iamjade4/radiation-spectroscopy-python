@@ -57,30 +57,36 @@ class photon(IParticle):
     def comptonscatter(theta, phi, energy, x, y, z, t, fano):
         #Ef = Ei/(1 + (Ei/me*c**2)(1-costheta)) where Ef is the energy of the final photon -> therefore energy deposited into the electron is Ei - Ef
         #Theta in the above statement is not the same as the theta taken as an argument. The theta in the calculation is the scattered angle, not the initial angle
-        theta_s = np.random.uniform(0, 2*np.pi) #THIS IS NOT THE REAL ANGULAR DISTRIBUTION. THE REAL ONE IS BASED OFF OF THE KLEIN NISHINA FORMULA https://en.wikipedia.org/wiki/Klein%E2%80%93Nishina_formula
         cos_theta = np.cos(theta)
         sin_theta = np.sin(theta)
         cos_phi = np.cos(phi)
         sin_phi = np.sin(phi)
+        cos_phi_s = np.cos(-phi)
+        sin_phi_s = np.sin(-phi)
         P_i = energy
         px_i = P_i * cos_theta * cos_phi
         py_i = P_i * sin_theta * cos_phi
         pz_i = P_i * sin_phi #momenta for incident photon
-        
+        theta_s = np.random.uniform(0, 2*np.pi) #THIS IS NOT THE REAL ANGULAR DISTRIBUTION. THE REAL ONE IS BASED OFF OF THE KLEIN NISHINA FORMULA https://en.wikipedia.org/wiki/Klein%E2%80%93Nishina_formula
+        cos_theta_s = np.cos(theta_s + theta)
+        sin_theta_s = np.sin(theta_s + theta)
         Ef = energy/(1 + (energy/511)*(1-np.cos(theta_s)))
+        Ps = Ef
+        pz_s = Ef * sin_phi_s
+        px_s = Ef * np.cos(theta_s) * cos_phi_s
+        py_s = Ef * np.sin(theta_s) * cos_phi_s
         E_el = energy - Ef
-        px_s = Ef * np.cos(theta_s + theta) * cos_phi
-        py_s = Ef * np.sin(theta_s + theta) * cos_phi #ignoring the phi component for now, 3D hurts head
-        
+        #P_el = math.sqrt(2*511*E_el) #This is correct i believe
+        P_el = math.sqrt(P_i**2-Ps**2)
         #conservation of momentum
         #Pi = Ps + Pe --> Pe = Pi - Ps
-        px_e = px_i - px_s
-        py_e = py_i - py_s
-        P_e = math.sqrt(E_el*2*511)
-        pz_e = math.sqrt(abs(P_e**2 - px_e**2 - py_e**2)) #This is negative somehow therefore my particle kinematics is wrong but i need to sleep soon so i will abs this
-        theta_e = np.arctan(py_e/px_e)
-        phi_e = np.arcsin(pz_e) ##invalid error here apparently
-        comptonelectron = electron(px_e, py_e, pz_e, theta_e, phi_e, x, y, z, t)
+        px_el = math.sqrt(abs(px_i**2 - px_s**2))#domain error --> ps > pi ? possibly small rounding error stuff bc everything else seeeems okayy
+        py_el = math.sqrt(abs(py_i**2 - py_s**2))
+        pz_el = math.sqrt(abs(pz_i**2 - pz_s**2))
+        #print(pz_el - pz_i + pz_s)#SHOULD be 0
+        #print(P_el**2 - px_el**2 - py_el**2 - pz_el**2) #most of these are smaller than 9, but some are like 500000? not sure what's going on there
+        theta_el = np.arctan(py_el/px_el)
+        comptonelectron = electron(px_el, py_el, pz_el, theta_el, phi, x, y, z, t)
         return comptonelectron.get_energy(fano)
         
         
