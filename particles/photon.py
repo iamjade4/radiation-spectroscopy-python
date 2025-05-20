@@ -2,6 +2,7 @@ import numpy as np
 import math
 from interfaces import IParticle
 from particles.electron import electron
+
 m_e = 511
 
 class photon(IParticle):
@@ -26,7 +27,6 @@ class photon(IParticle):
         dx = cos_theta * cos_phi 
         dy = sin_theta * cos_phi
         dz = sin_phi
-        
         return np.column_stack([dx, dy, dz])
 
     def get_origin(self):
@@ -37,11 +37,10 @@ class photon(IParticle):
 
     def energy(self):
         return math.sqrt(self.px**2 + self.py**2 + self.pz**2)
-    
+
     def get_direction(self):
         return (self._dx, self._dy, self._dz)
         
-    
     def photoelectric(thetas, phis, energy, x, y, z, t, fano): #photons will have a chance to undergo the photoelectric effect when detected. They create an electron with the same energy as the incident photon (-the binding energy but that is negligible so will be ignored for now)
         cos_theta = np.cos(thetas)
         sin_theta = np.sin(thetas)
@@ -53,7 +52,7 @@ class photon(IParticle):
         pz_e = P_e * sin_phi
         photoelectron = electron(px_e, py_e, pz_e, thetas, phis, x, y, z, t) #This is assuming that the electron recoils in the same direction as the photon. In reality it will be more complex but I will come to that later
         return photoelectron.get_energy(fano)
-     
+
     def comptonscatter(theta, phi, energy, x, y, z, t, fano):
         #Ef = Ei/(1 + (Ei/me*c**2)(1-costheta)) where Ef is the energy of the final photon -> therefore energy deposited into the electron is Ei - Ef
         #Theta in the above statement is not the same as the theta taken as an argument. The theta in the calculation is the scattered angle, not the initial angle
