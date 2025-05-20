@@ -1,74 +1,66 @@
 import numpy as np
-
 from particles.photon import photon
 from detectors.naitl import NaITl
 from detectors.si import Si
-from particles.electron import electron
+#from particles.electron import electron
 import matplotlib
 import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout
+#from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout
 import sys
-#matplotlib.use('Qt5Agg')
 
+SIMULATION_CONFIG = {
+    "E": 662,  # Energies are in keV, natural units are assumed, distances are in mm for now (for the sake of dimensions of detectors), 1eV = 1.66e10-19J
+    "n_photons": 10_000_000,
+    "batch_size": 100_000,
+    "bins": 1024,
+    "hist_range": (0, 1000)
+}
+
+#matplotlib.use('Qt5Agg')
 #class MainWindow(QMainWindow):#does this go here idk how pyqt works    
 #    def __init__(self, *args, **kwargs):
 #        super().__init__(*args, **kwargs)
-        
-E = 662 #Energies are in keV, natural units are assumed, distances are in mm for the time being (for the sake of dimensions of detectors)
-#1eV = 1.66e10-19J
 
-#Creating the detector once to avoid creating it 1000 times
-energies = []
-
-detector1 = NaITl(100, 100, 0, 60, 60, 60) #Recently changed this to be 6x6x6 cm to be more realistic. Expect much smaller detection counts
-detector2 = Si(100, 0, 100, 60, 60, 2) #Silicon detectors tend to be THIN (hence the 2mm depth) 
-detected1 = 0
-detected2 = 0
-
-n_photons = 10_000_000 # number of photons. also you can insert _ in a number without issue to break it up in python
-batch_size = 100_000 # size per batch (i usually do ~10% of photons but its kind of up to you and your memory, at 10m i do 1% so 100k)
 #layout = QVBoxLayout()
 #widget = QWidget()
 #widget.setLayout(layout)
 
-for i in range(0, n_photons, batch_size):
-    batch_detected1 = 0
-    batch_detected2 = 0
-    theta = np.random.uniform(0, 2*np.pi, batch_size)
-    phi = np.random.uniform(-np.pi/2, np.pi/2, batch_size)
-    px = E * np.cos(theta) * np.cos(phi)
-    py = E * np.sin(theta) * np.cos(phi)
-    pz = E * np.sin(phi)
-    directions = photon.batch_calculate_direction(theta, phi)
-    origins = np.zeros((batch_size, 3))  # assumes they all have the same origin of 0 0 0
-    
-    # DETECT THAT BATCH!!
-    returns = [detector1.detects_batch(origins, directions, theta, phi, E), detector2.detects_batch(origins, directions, theta, phi, E)]
-    
-    mask1 = returns[0][0] #This is the bulk of bool (BULK OF BOOL!!!) ie number of detections in this batch
-    detected1 += np.sum(mask1)
-    batch_detected1 = np.sum(mask1)
-    
-    mask2 = returns[1][0]
-    detected2 += np.sum(mask2)
-    batch_detected2 = np.sum(mask2)
-#energies = np.concatenate((returns[0][1][:], returns[1][1][:]))#This is giving energy two different arrays, one for each detector. I will combine them just to superimpose the spectra into a single output, but realistically they should remain separate and have separate outputs
-           #Concatenate combines the two arrays                         
-energies = returns[0][1][:], returns[1][1][:]
-print(detected1, detected2)
+def simulate(n_photons: int, batch_size: int, E: float, detectors: list):
+    detected_counts = [0] * len(detectors)
+    energies = [[] for i in detectors]
 
-i = len(energies)#number of detectors
-fig, axs = plt.subplots(i)
-for i in range(i):
-    axs[i].hist(energies[i], bins=1024, range=[0,1000], histtype='step')#splitting into i different figures for each detector
-plt.show()
-        
-#        layout.addWidget(fig) #dont work 
-#        self.setCentralWidget(widget)
+    for i in range(0, n_photons, batch_size):
+        theta = np.random.uniform(0, 2 * np.pi, batch_size)
+        phi = np.random.uniform(-np.pi/2, np.pi/2, batch_size)
+        directions = photon.batch_calculate_direction(theta, phi)
+        origins = np.zeros((batch_size, 3))
 
-#        self.show()
+        for idx, det in enumerate(detectors):
+            mask, batch_energies = det.detects_batch(origins, directions, theta, phi, E)
+            detected_counts[idx] += np.sum(mask)
+            energies[idx].extend(batch_energies) # this adds the cumulative data, previously you were only plotting the last batch (unless thats what you wanted to do in which case, sorry)
+
+    return detected_counts, energies
+
+def plot_spectra(energies: list, bins: int = 1024, energy_range=(0, 1000)):
+    num_det = len(energies)
+    fig, axs = plt.subplots(num_det, 1, figsize=(10, 4 * num_det), squeeze=False)
+    for i, (ax, detector_energies) in enumerate(zip(axs.flat, energies)):
+        ax.hist(detector_energies, bins=bins, range=energy_range, histtype='step')
+    plt.tight_layout()
+    plt.show()
 
 
-#app = QApplication(sys.argv)
-#w = MainWindow()
-#app.exec_()
+def main():
+    cfg = SIMULATION_CONFIG
+    detectors = [
+        NaITl(100, 100, 0, 60, 60, 60),  # 6x6x6cm NaITl
+        Si(100, 0, 100, 60, 60, 2)       # 6x6x0.2cm Si (silicon detector is thin)
+    ]
+    detected_counts, energies = simulate(cfg["n_photons"], cfg["batch_size"], cfg["E"], detectors)
+    for idx, count in enumerate(detected_counts, start=1):
+        print(f"detected {count} photons")
+    plot_spectra(energies, bins=cfg["bins"], energy_range=cfg["hist_range"])
+
+if __name__ == '__main__':
+    main()
