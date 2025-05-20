@@ -1,7 +1,6 @@
 import numpy as np
 from interfaces import IDetector, IParticle
 from particles.photon import photon
-electrons = []
 fano = 1 #This is intrinsic to scintillators in general, so will be defined here. Maybe if I make a parent class of Scintillator I could provide it there as the Fano factor tends to be 1 for all scintillators
 
 class NaITl(IDetector):
@@ -27,6 +26,7 @@ class NaITl(IDetector):
 
         
     def detects_batch(self, origins, directions, theta, phi, E):
+        electrons = []
         xc, yc, zc, xf, yf, zf = self._bounds
         bound_min = np.array([xc, yc, zc])
         bound_max = np.array([xf, yf, zf])
@@ -50,17 +50,15 @@ class NaITl(IDetector):
         phis = np.where(tclose <= tfar, phi, None)
         batch_detected = np.sum(tclose <= tfar)
         tclose_det = np.where(tclose <= tfar, tclose, None)
+        angles = photon.gen_angles(E, 100000)#batchsize, for some reason it isn't implemented here
         for i in range(100000):
             if tclose[i] <= tfar[i]:
                 random = np.random.rand()
                 if random <= 0.5:
                     electron_E = (photon.photoelectric(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano))  
                 else:
-                    electron_E = (photon.comptonscatter(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano)) #This makes it a 50/50 between making a photoelectron and a compton electron. This is not physical because I Am Tired
+                    electron_E = (photon.comptonscatter(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano, angles)) #This makes it a 50/50 between making a photoelectron and a compton electron. This is not physical because I Am Tired
                 electrons.append(round(electron_E)) #rounding to an int here. Realistically, it will just be put into a channel number for spectroscopy but rounding is easiest for now
-
-        #print(positions)
-        
         return tclose <= tfar, electrons #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
             
         

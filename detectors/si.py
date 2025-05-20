@@ -28,6 +28,7 @@ class Si(IDetector):
 
         
     def detects_batch(self, origins, directions, theta, phi, E):
+        electrons = []
         xc, yc, zc, xf, yf, zf = self._bounds
         bound_min = np.array([xc, yc, zc])
         bound_max = np.array([xf, yf, zf])
