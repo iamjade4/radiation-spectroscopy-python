@@ -13,8 +13,9 @@ SIMULATION_CONFIG = {
     "n_photons": 10_000_000,
     "batch_size": 100_000,
     "bins": 1024,
-    "hist_range": (0, 1000)
+    "hist_range": (0, 1024)
 }
+plt.rcParams['axes.xmargin'] = 0
 
 #matplotlib.use('Qt5Agg')
 #class MainWindow(QMainWindow):#does this go here idk how pyqt works    

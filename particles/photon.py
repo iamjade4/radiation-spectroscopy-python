@@ -5,7 +5,7 @@ from interfaces import IParticle
 from particles.electron import electron
 from scipy import stats
 
-m_e = 511
+m_e = 511 #restmass energy
 
 class photon(IParticle):
     def __init__(self, px, py, pz, theta, phi, x, y, z, t):
@@ -30,6 +30,10 @@ class photon(IParticle):
         dy = sin_theta * cos_phi
         dz = sin_phi
         return np.column_stack([dx, dy, dz])
+    def f(theta_s, energy, E_s):
+        energy = energy*1000
+        E_s = E_s*1000 #putting them in eV as I believe that's correct
+        return ((1/(photon.I(np.pi, energy)-photon.I(0, energy)))*((E_s/energy)**2)*((energy/E_s)+(E_s/energy)-np.sin(theta_s)**2)*np.sin(theta_s)) #probability density function - This also didnt normalise properly? so i am dividing it to normalise it although it should already be normalised
     def I(theta_s, energy):#For the crosssection from the Klein Nishina formula
         R = energy/m_e
         return -np.cos(theta_s) / R**2 + \
@@ -38,8 +42,6 @@ class photon(IParticle):
                1 / (1 + R * (1 - np.cos(theta_s))) * (-2/R**2 - 1/R**3)
     def E_s(theta_s, energy):
         return(energy/(1 + (energy/511)*(1-np.cos(theta_s))))
-    def f(theta_s, energy, E_s):
-        return ((1/(photon.I(np.pi, energy)-photon.I(0, energy)))*((E_s/energy)**2)*((energy/E_s)+(E_s/energy)-np.sin(theta_s)**2)*np.sin(theta_s))/31830.6703026283 #probability density function - This also didnt normalise properly? so i am dividing it to normalise it although it should already be normalised
     def get_origin(self):
         return (self.x, self.y, self.z)
 
@@ -51,11 +53,16 @@ class photon(IParticle):
 
     def get_direction(self):
         return (self._dx, self._dy, self._dz)
-    def gen_angles(energy, batch_size):
-        theta_s = np.linspace(0, np.pi, batch_size)
-        angle_energies = np.linspace(energy, energy, batch_size)
+    def comptonscatter_csc(Ei):
+        epsilon = Ei/m_e
+        r_e = math.sqrt(79.4) #mB
+        #not sure how to go about this since I need the klein nishina formula but I dont want to integrate over all angles to generate a probability distribution. I just want the interaction probability.
+        return 2*np.pi*(r_e**2)*((1+epsilon)/epsilon**3 * ((2*epsilon*(1 + epsilon))/(1+2*epsilon)-math.log(1+2*epsilon))+math.log(1+2*epsilon)/2*epsilon -(1+3*epsilon)/((1+2*epsilon)**2))
+    def gen_angles(energy):
+        theta_s = np.linspace(0, np.pi, 100_000)
+        angle_energies = np.linspace(energy, energy, 100_000)
         dstr = photon.f(theta_s, angle_energies, photon.E_s(theta_s, angle_energies))
-        angle_array = random.choices(theta_s, dstr, k=batch_size) #Doing it in bulk here instead of parsing it through to comptonscatter and doing it individually
+        angle_array = random.choices(theta_s, dstr, k=100_000) #Doing it in bulk here instead of parsing it through to comptonscatter and doing it individually
         return(angle_array)
     def photoelectric(thetas, phis, energy, x, y, z, t, fano): #photons will have a chance to undergo the photoelectric effect when detected. They create an electron with the same energy as the incident photon (-the binding energy but that is negligible so will be ignored for now)
         cos_theta = np.cos(thetas)
@@ -68,7 +75,21 @@ class photon(IParticle):
         pz_e = P_e * sin_phi
         photoelectron = electron(px_e, py_e, pz_e, thetas, phis, x, y, z, t) #This is assuming that the electron recoils in the same direction as the photon. In reality it will be more complex but I will come to that later
         return photoelectron.get_energy(fano)
-
+    def photoelectric_csc_mid(Z, Ei):#crosssection for photoelectric effect
+        epsilon = Ei/m_e    
+        gamma = (Ei + m_e)/m_e #ignoring E_b
+        Ei = Ei*1000 #keV to eV
+        return 3/2 * 0.66526 * (1/137**4) * ((Z/epsilon)**5)*((gamma**2 - 1)**3/2)*(4/3 + (gamma*(gamma-2))/(gamma+1) * (1 - 1/(2*gamma*math.sqrt(gamma**2 - 1)) *math.log((gamma + math.sqrt(gamma**2-1))/(gamma - math.sqrt(gamma**2-1)))))
+    def photoelectric_csc_high(Z, Ei):
+        epsilon = Ei/m_e 
+        a = 1.6268*10**-9, 1.5274*10**-9, 1.1330*10**-9, -9.12*10**-11
+        b = -2.683*10**-12, -5.110*10**-13, -2.177*10**-12, 0
+        c = 4.173*10**-2, 1.027*10**-2, 2.013*10**-2, 0
+        p = 1, 2, 3.5, 4
+        csc = 0
+        for i in range(4):
+            csc += (Z**5)*((a[i]+b[i]*Z)/(1+c[i]*Z)*epsilon**-p[i])
+        return csc
     def comptonscatter(theta, phi, energy, x, y, z, t, fano, angles):
         #Ef = Ei/(1 + (Ei/me*c**2)(1-costheta)) where Ef is the energy of the final photon -> therefore energy deposited into the electron is Ei - Ef
         #Theta in the above statement is not the same as the theta taken as an argument. The theta in the calculation is the scattered angle, not the initial angle
@@ -101,5 +122,6 @@ class photon(IParticle):
         theta_el = np.arctan(py_el/px_el)
         comptonelectron = electron(px_el, py_el, pz_el, theta_el, phi, x, y, z, t)
         return comptonelectron.get_energy(fano)
+
         
         
