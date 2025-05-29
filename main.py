@@ -1,11 +1,12 @@
-import numpy as np
 from particles.photon import photon
 from detectors.naitl import NaITl
 from detectors.si import Si
+from qtwidget import MyWidget
 #from particles.electron import electron
 import matplotlib
 import matplotlib.pyplot as plt
-#from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout
+import numpy as np
+from PyQt5 import QtCore as Qtcre, QtWidgets as Qtwdgt, QtGui as Qtgui
 import sys
 
 SIMULATION_CONFIG = {
@@ -16,15 +17,6 @@ SIMULATION_CONFIG = {
     "hist_range": (0, 1024)
 }
 plt.rcParams['axes.xmargin'] = 0
-
-#matplotlib.use('Qt5Agg')
-#class MainWindow(QMainWindow):#does this go here idk how pyqt works    
-#    def __init__(self, *args, **kwargs):
-#        super().__init__(*args, **kwargs)
-
-#layout = QVBoxLayout()
-#widget = QWidget()
-#widget.setLayout(layout)
 
 def simulate(n_photons: int, batch_size: int, E: float, detectors: list):
     detected_counts = [0] * len(detectors)
@@ -50,7 +42,8 @@ def plot_spectra(energies: list, bins: int = 1024, energy_range=(0, 1000)):
     for i, (ax, detector_energies) in enumerate(zip(axs.flat, energies)):
         ax.hist(detector_energies, bins=bins, range=energy_range, histtype='step')
     plt.tight_layout()
-    plt.show()
+    plt.show() 
+    return fig
 
 
 def main():
@@ -62,7 +55,18 @@ def main():
     detected_counts, energies = simulate(cfg["n_photons"], cfg["batch_size"], cfg["E"], detectors)
     for idx, count in enumerate(detected_counts, start=1):
         print(f"detected {count} photons")
-    plot_spectra(energies, bins=cfg["bins"], energy_range=cfg["hist_range"])
+    fig = plot_spectra(energies, bins=cfg["bins"], energy_range=cfg["hist_range"])
+    if not Qtwdgt.QApplication.instance():
+        app = Qtwdgt.QApplication([])
+    else:
+        app = Qtwdgt.QApplication.instance()
+    widget = MyWidget(fig)
+    widget.resize(800, 600)
+    widget.show()
+    
+    exit_code = app.exec()
+    sys.exit(exit_code)
+        
 
 if __name__ == '__main__':
     main()
