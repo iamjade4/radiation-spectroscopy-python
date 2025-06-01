@@ -25,8 +25,20 @@ class NaITl(IDetector):
         )
 
         
-    def detects_batch(self, origins, directions, theta, phi, E):
+    def detects_batch(self, origins, directions, theta, phi, E, batch_size):
+        compton_bool = False
+        compton = 0 #number of compton scattered photons. It will be used to recursively call detects_batch for multiple scatters.
+        photon_s_px = []
+        photon_s_py = []
+        photon_s_pz = []
+        photon_s_E = []
+        photon_s_theta = []
+        photon_s_phi = []
+        photon_s_x = []
+        photon_s_y = []
+        photon_s_z = []
         electrons = []
+        compton_E = []
         xc, yc, zc, xf, yf, zf = self._bounds
         bound_min = np.array([xc, yc, zc])
         bound_max = np.array([xf, yf, zf])
@@ -39,7 +51,6 @@ class NaITl(IDetector):
         t_max = np.where(directions == 0, np.inf, t_max)
         tclose = np.max(t_min, axis=1)
         tfar = np.min(t_max, axis=1)
-        #Origins is (100000, 3) and I want to pull (100000,x) out of it
         positions = origins + np.dot(tclose, directions)
         positions = positions.reshape(-1,3)
         
@@ -50,7 +61,7 @@ class NaITl(IDetector):
         phis = np.where(tclose <= tfar, phi, None)
         batch_detected = np.sum(tclose <= tfar)
         tclose_det = np.where(tclose <= tfar, tclose, None)
-        angles = photon.gen_angles(E)
+        angles = photon.gen_angles(E, batch_size)
         if E > 500:
             photo_csc = photon.photoelectric_csc_high(Z_n, E) #photoelectric crosssection for high energies
         else:
@@ -59,15 +70,70 @@ class NaITl(IDetector):
         total = compton_csc + photo_csc
         threshold = photo_csc/total
         #print(compton_csc, photo_csc) the photoelectric crosssection seems sooooo small for high energies but i guess that makes sense
-        for i in range(100000):
+        for i in range(batch_size):
             if tclose[i] <= tfar[i]:
                 #Going to compute interaction probability based off of photon cross sections
                 random = np.random.rand()
                 if random <= threshold: #my photopeak..... so so small
                     electron_E = (photon.photoelectric(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano))  
+                    electrons.append(electron_E)
+                    compton_bool = False
                 else:
-                    electron_E = (photon.comptonscatter(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano, angles)) 
-                electrons.append(round(electron_E)) #rounding to an int here. Realistically, it will just be put into a channel number for spectroscopy but rounding is easiest for now
+                    electron = (photon.comptonscatter(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano, angles))
+                    compton_E.append(electron[0])
+                    compton += 1
+                    photon_s_px.append(electron[1])
+                    photon_s_py.append(electron[2])
+                    photon_s_pz.append(electron[3])
+                    photon_s_E.append(electron[4])
+                    photon_s_theta.append(electron[5])
+                    photon_s_phi.append(electron[6])
+                    photon_s_x.append(x[i])
+                    photon_s_y.append(y[i])
+                    photon_s_z.append(z[i]) #this sucks
+                    #the scattered photon from compton scattering
+                    compton_bool = True
+        if compton > 0:
+            print(compton)
+            origins = photon_s_x, photon_s_y, photon_s_z
+            origins = np.transpose(origins)
+            directions = photon_s_px, photon_s_py, photon_s_pz
+            directions = np.transpose(directions)
+            for i in range(compton):
+                compton_bool = True
+                electron_E = compton_E[i]
+                j=0
+                while compton_bool == True:
+                    j +=1
+                    electron = (self.detects_single(origins, directions, photon_s_theta, photon_s_phi, photon_s_E, electrons, tclose_det[i], i, angles)) #recursively calling the method for each scattered photon. HORRIBLY inefficient but since the energies are different, each photon needs to be called inidividually
+                    electron_E += electron[0]
+                    compton_bool = electron[1]
+                    if compton_bool == False:
+                        break
+                    directions[i] = electron[2], electron[3], electron[4]
+                    photon_s_E[i]= electron[5]
+                    photon_s_theta[i] = electron[6]
+                    photon_s_phi[i] = electron[7]
+                    print(electron_E + photon_s_E[i]) #this should always be 662. But it isnt!
+                electrons.append(electron_E)
         return tclose <= tfar, electrons #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
             
-        
+    def detects_single(self, origins, directions, thetas, phis, E, electron, t, i, angles): #this is just for compton photons        
+        #Doesn't need to go through the detection algorithm, we already know it is in the detector (this will change when penetration into a detector is considered)
+        if E[i] > 500:
+            photo_csc = photon.photoelectric_csc_high(Z_n, E[i]) #photoelectric crosssection for high energies
+        else:
+            photo_csc = photon.photoelectric_csc_mid(Z_n, E[i])
+        compton_csc = photon.comptonscatter_csc(E[i])
+        total = compton_csc + photo_csc
+        threshold = photo_csc/total #eventually this will approach 1 for low energy photons -> guaranteeing that comptonscatters will end with a photoelectri absorption (but also there's the probability of escaping which isn't considered here)
+        random = np.random.rand()
+        if random <= threshold: #my photopeak..... so so small
+            electron_E = (photon.photoelectric(thetas[i], phis[i], E[i], origins[i][0], origins[i][1], origins[i][2], t, self.fano))  
+            compton_bool = False
+            return electron_E, compton_bool
+        else:
+            electron = (photon.comptonscatter(thetas[i], phis[i], E[i], origins[i][0], origins[i][1], origins[i][2], t, self.fano, angles))
+            compton_bool = True
+            electron_E = electron[0]    
+            return electron_E, compton_bool, electron[1], electron[2], electron[3], electron[4], electron[5], electron[6]

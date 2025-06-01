@@ -58,11 +58,11 @@ class photon(IParticle):
         r_e = math.sqrt(79.4) #mB
         #not sure how to go about this since I need the klein nishina formula but I dont want to integrate over all angles to generate a probability distribution. I just want the interaction probability.
         return 2*np.pi*(r_e**2)*((1+epsilon)/epsilon**3 * ((2*epsilon*(1 + epsilon))/(1+2*epsilon)-math.log(1+2*epsilon))+math.log(1+2*epsilon)/2*epsilon -(1+3*epsilon)/((1+2*epsilon)**2))
-    def gen_angles(energy):
-        theta_s = np.linspace(0, np.pi, 100_000)
-        angle_energies = np.linspace(energy, energy, 100_000)
-        dstr = photon.f(theta_s, angle_energies, photon.E_s(theta_s, angle_energies))
-        angle_array = random.choices(theta_s, dstr, k=100_000) #Doing it in bulk here instead of parsing it through to comptonscatter and doing it individually
+    def gen_angles(energy, batch_size):
+        theta_s = np.linspace(0, np.pi, batch_size)
+        angle_energies = np.linspace(energy, energy, num = batch_size)
+        dstr = photon.f(theta_s, angle_energies, photon.E_s(theta_s, angle_energies))/5069938.428811579 #to add to 1
+        angle_array = np.random.choice(theta_s, size=batch_size, p=dstr) #changed to np.random.choice from random.choices due to an internal value error in random
         return(angle_array)
     def photoelectric(thetas, phis, energy, x, y, z, t, fano): #photons will have a chance to undergo the photoelectric effect when detected. They create an electron with the same energy as the incident photon (-the binding energy but that is negligible so will be ignored for now)
         cos_theta = np.cos(thetas)
@@ -121,7 +121,9 @@ class photon(IParticle):
         #print(P_el**2 - px_el**2 - py_el**2 - pz_el**2) #most of these are smaller than 9, but some are like 500000? not sure what's going on there
         theta_el = np.arctan(py_el/px_el)
         comptonelectron = electron(px_el, py_el, pz_el, theta_el, phi, x, y, z, t)
-        return comptonelectron.get_energy(fano)
+        theta_s = theta_s + theta #Actual angle of the scattered photon relative to the origin
+        phi_s = -phi 
+        return comptonelectron.get_energy(fano), px_s, py_s, pz_s, Ps, theta_s, phi_s
 
         
         

@@ -29,7 +29,7 @@ def simulate(n_photons: int, batch_size: int, E: float, detectors: list):
         origins = np.zeros((batch_size, 3))
 
         for idx, det in enumerate(detectors):
-            mask, batch_energies = det.detects_batch(origins, directions, theta, phi, E)
+            mask, batch_energies = det.detects_batch(origins, directions, theta, phi, E, batch_size)
             detected_counts[idx] += np.sum(mask)
             energies[idx].extend(batch_energies) # this adds the cumulative data, previously you were only plotting the last batch (unless thats what you wanted to do in which case, sorry)
 

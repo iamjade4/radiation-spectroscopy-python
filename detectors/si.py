@@ -27,7 +27,7 @@ class Si(IDetector):
         )
 
         
-    def detects_batch(self, origins, directions, theta, phi, E):
+    def detects_batch(self, origins, directions, theta, phi, E, batch_size):
         electrons = []
         xc, yc, zc, xf, yf, zf = self._bounds
         bound_min = np.array([xc, yc, zc])
@@ -52,7 +52,7 @@ class Si(IDetector):
         phis = np.where(tclose <= tfar, phi, None)
         batch_detected = np.sum(tclose <= tfar)
         tclose_det = np.where(tclose <= tfar, tclose, None)
-        for i in range(100000):
+        for i in range(batch_size):
             if tclose[i] <= tfar[i]:
                 electron_E = (photon.photoelectric(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano))  
                 electrons.append(round(electron_E)) #rounding to an int here. Realistically, it will just be put into a channel number for spectroscopy but rounding is easiest for now
