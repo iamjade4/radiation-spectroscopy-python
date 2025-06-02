@@ -104,8 +104,9 @@ class NaITl(IDetector):
                 electron_E = compton_E[i]
                 j=0
                 while compton_bool == True:
+                    #print(electron_E, photon_s_E[i], j)
                     j +=1
-                    electron = (self.detects_single(origins, directions, photon_s_theta, photon_s_phi, photon_s_E, electrons, tclose_det[i], i, angles)) #recursively calling the method for each scattered photon. HORRIBLY inefficient but since the energies are different, each photon needs to be called inidividually
+                    electron = (self.detects_single(origins[i], directions[i], photon_s_theta[i], photon_s_phi[i], photon_s_E[i], electrons, tclose_det[i], i, angles)) #recursively calling the method for each scattered photon. HORRIBLY inefficient but since the energies are different, each photon needs to be called inidividually
                     electron_E += electron[0]
                     compton_bool = electron[1]
                     if compton_bool == False:
@@ -114,26 +115,26 @@ class NaITl(IDetector):
                     photon_s_E[i]= electron[5]
                     photon_s_theta[i] = electron[6]
                     photon_s_phi[i] = electron[7]
-                    print(electron_E + photon_s_E[i]) #this should always be 662. But it isnt!
+                    #print(electron_E + photon_s_E[i]) #this should always be 662. But it isnt!
                 electrons.append(electron_E)
         return tclose <= tfar, electrons #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
             
     def detects_single(self, origins, directions, thetas, phis, E, electron, t, i, angles): #this is just for compton photons        
         #Doesn't need to go through the detection algorithm, we already know it is in the detector (this will change when penetration into a detector is considered)
-        if E[i] > 500:
-            photo_csc = photon.photoelectric_csc_high(Z_n, E[i]) #photoelectric crosssection for high energies
+        if E > 500:
+            photo_csc = photon.photoelectric_csc_high(Z_n, E) #photoelectric crosssection for high energies
         else:
-            photo_csc = photon.photoelectric_csc_mid(Z_n, E[i])
-        compton_csc = photon.comptonscatter_csc(E[i])
+            photo_csc = photon.photoelectric_csc_mid(Z_n, E)
+        compton_csc = photon.comptonscatter_csc(E)
         total = compton_csc + photo_csc
         threshold = photo_csc/total #eventually this will approach 1 for low energy photons -> guaranteeing that comptonscatters will end with a photoelectri absorption (but also there's the probability of escaping which isn't considered here)
         random = np.random.rand()
         if random <= threshold: #my photopeak..... so so small
-            electron_E = (photon.photoelectric(thetas[i], phis[i], E[i], origins[i][0], origins[i][1], origins[i][2], t, self.fano))  
+            electron_E = (photon.photoelectric(thetas, phis, E, origins[0], origins[1], origins[2], t, self.fano))  
             compton_bool = False
             return electron_E, compton_bool
         else:
-            electron = (photon.comptonscatter(thetas[i], phis[i], E[i], origins[i][0], origins[i][1], origins[i][2], t, self.fano, angles))
+            electron = (photon.comptonscatter(thetas, phis, E, origins[0], origins[1], origins[2], t, self.fano, angles))
             compton_bool = True
             electron_E = electron[0]    
             return electron_E, compton_bool, electron[1], electron[2], electron[3], electron[4], electron[5], electron[6]

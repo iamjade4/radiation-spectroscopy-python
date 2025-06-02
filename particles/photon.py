@@ -121,9 +121,9 @@ class photon(IParticle):
         #print(P_el**2 - px_el**2 - py_el**2 - pz_el**2) #most of these are smaller than 9, but some are like 500000? not sure what's going on there
         theta_el = np.arctan(py_el/px_el)
         comptonelectron = electron(px_el, py_el, pz_el, theta_el, phi, x, y, z, t)
-        theta_s = theta_s + theta #Actual angle of the scattered photon relative to the origin
+        #theta_s = theta_s + theta #Actual angle of the scattered photon relative to the origin
         phi_s = -phi 
-        return comptonelectron.get_energy(fano), px_s, py_s, pz_s, Ps, theta_s, phi_s
+        return comptonelectron.get_energy(fano), px_s, py_s, pz_s, Ef, theta_s, phi_s
 
         
         

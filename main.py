@@ -61,7 +61,7 @@ def main():
     else:
         app = Qtwdgt.QApplication.instance()
     widget = MyWidget(fig)
-    widget.resize(800, 600)
+    widget.resize(1400, 800)
     widget.show()
     
     exit_code = app.exec()
