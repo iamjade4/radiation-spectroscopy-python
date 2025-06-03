@@ -36,7 +36,6 @@ def simulate(n_photons: int, batch_size: int, E: float, detectors: list):
     return detected_counts, energies
 
 def plot_spectra(energies: list, bins: int = 1024, energy_range=(0, 1000)):
-    print(len(energies[0]))
     num_det = len(energies)
     fig, axs = plt.subplots(num_det, 1, figsize=(10, 4 * num_det), squeeze=False)
     for i, (ax, detector_energies) in enumerate(zip(axs.flat, energies)):

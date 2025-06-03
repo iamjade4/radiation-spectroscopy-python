@@ -97,8 +97,6 @@ class photon(IParticle):
         sin_theta = np.sin(theta)
         cos_phi = np.cos(phi)
         sin_phi = np.sin(phi)
-        cos_phi_s = np.cos(-phi)
-        sin_phi_s = np.sin(-phi)
         P_i = energy
         px_i = P_i * cos_theta * cos_phi
         py_i = P_i * sin_theta * cos_phi
@@ -106,24 +104,41 @@ class photon(IParticle):
         theta_s = random.choice(angles) #using the defined distribution to choose a weighted angle. This is a bit slow but that's ok
         Ef = energy/(1 + (energy/511)*(1-np.cos(theta_s)))
         Ps = Ef
-        pz_s = Ef * sin_phi_s
-        px_s = Ef * np.cos(theta_s) * cos_phi_s
-        py_s = Ef * np.sin(theta_s) * cos_phi_s
+        #pz_s = Ef * sin_phi_s
+        pX_s = Ef * np.cos(theta_s)#These are not on the same axis as px_i and py_i. These are on a plane that follows P_i. P_i is parallel to pX_s
+        pY_s = Ef * np.sin(theta_s)
+        if theta_s > np.pi:
+            cos_theta_pl = np.cos(theta + np.pi/2)
+            sin_theta_pl = np.sin(theta + np.pi/2)
+        else:
+            cos_theta_pl = np.cos(theta - np.pi/2)
+            sin_theta_pl = np.sin(theta - np.pi/2)
         E_el = energy - Ef
         #P_el = math.sqrt(2*511*E_el) #This is correct i believe
         P_el = math.sqrt(P_i**2-Ps**2)
         #conservation of momentum
         #Pi = Ps + Pe --> Pe = Pi - Ps
+        if (theta_s*cos_phi + theta > np.pi/2 and theta_s*cos_phi < 3*np.pi/2):
+            pX_s = -pX_s
+        if theta_s*cos_phi + theta > np.pi:
+            pY_s = -pY_s
+        px_s = pX_s*cos_theta*cos_phi + pY_s*cos_theta_pl#converting from the cme frame to the origin frame
+        py_s = pX_s*sin_theta*cos_phi + pY_s*sin_theta_pl
+        pz_s = pX_s*sin_phi
+        
         px_el = math.sqrt(abs(px_i**2 - px_s**2))#domain error --> ps > pi ? possibly small rounding error stuff bc everything else seeeems okayy
         py_el = math.sqrt(abs(py_i**2 - py_s**2))
         pz_el = math.sqrt(abs(pz_i**2 - pz_s**2))
         #print(pz_el - pz_i + pz_s)#SHOULD be 0
-        #print(P_el**2 - px_el**2 - py_el**2 - pz_el**2) #most of these are smaller than 9, but some are like 500000? not sure what's going on there
         theta_el = np.arctan(py_el/px_el)
         comptonelectron = electron(px_el, py_el, pz_el, theta_el, phi, x, y, z, t)
-        #theta_s = theta_s + theta #Actual angle of the scattered photon relative to the origin
-        phi_s = -phi 
-        return comptonelectron.get_energy(fano), px_s, py_s, pz_s, Ef, theta_s, phi_s
+        theta_s_ = np.arctan(py_s/px_s)
+        phi_s = np.arcsin(pz_s/pX_s)
+        #print(py_s, px_s, theta_s, phi_s)
+        #if abs(P_el**2 - px_el**2 - py_el**2 - pz_el**2) > 1: #most of these are smaller than 9, but some are like 100000? not sure what's going on there
+        #    print(pX_s, pY_s, px_s, py_s, pz_s, theta_s)#I think how I handle sign changes over theta is wrong
+ 
+        return comptonelectron.get_energy(fano), px_s, py_s, pz_s, Ef, theta_s_, phi_s
 
         
         

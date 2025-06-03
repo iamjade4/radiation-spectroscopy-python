@@ -94,7 +94,7 @@ class NaITl(IDetector):
                     #the scattered photon from compton scattering
                     compton_bool = True
         if compton > 0:
-            print(compton)
+            print(compton, "photons scattered in this batch") #Debug
             origins = photon_s_x, photon_s_y, photon_s_z
             origins = np.transpose(origins)
             directions = photon_s_px, photon_s_py, photon_s_pz
