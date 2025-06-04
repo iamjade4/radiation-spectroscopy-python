@@ -107,23 +107,19 @@ class photon(IParticle):
         #pz_s = Ef * sin_phi_s
         pX_s = Ef * np.cos(theta_s)#These are not on the same axis as px_i and py_i. These are on a plane that follows P_i. P_i is parallel to pX_s
         pY_s = Ef * np.sin(theta_s)
-        if theta_s > np.pi:
-            cos_theta_pl = np.cos(theta + np.pi/2)
-            sin_theta_pl = np.sin(theta + np.pi/2)
-        else:
-            cos_theta_pl = np.cos(theta - np.pi/2)
-            sin_theta_pl = np.sin(theta - np.pi/2)
+        #if theta_s > np.pi:
+        #    pY_s = -pY_s
         E_el = energy - Ef
         #P_el = math.sqrt(2*511*E_el) #This is correct i believe
         P_el = math.sqrt(P_i**2-Ps**2)
         #conservation of momentum
         #Pi = Ps + Pe --> Pe = Pi - Ps
-        if (theta_s*cos_phi + theta > np.pi/2 and theta_s*cos_phi < 3*np.pi/2):
+        if (theta_s*cos_phi + theta > np.pi/2 and theta_s*cos_phi +theta < 3*np.pi/2):
             pX_s = -pX_s
-        if theta_s*cos_phi + theta > np.pi:
-            pY_s = -pY_s
-        px_s = pX_s*cos_theta*cos_phi + pY_s*cos_theta_pl#converting from the cme frame to the origin frame
-        py_s = pX_s*sin_theta*cos_phi + pY_s*sin_theta_pl
+        #if theta_s*cos_phi + theta > 3*np.pi/2:
+        #    pY_s = -pY_s
+        px_s = pX_s*cos_theta*cos_phi - pY_s*abs(sin_theta)#converting from the cme frame to the origin frame
+        py_s = pX_s*sin_theta*cos_phi + pY_s*abs(cos_theta)
         pz_s = pX_s*sin_phi
         
         px_el = math.sqrt(abs(px_i**2 - px_s**2))#domain error --> ps > pi ? possibly small rounding error stuff bc everything else seeeems okayy
@@ -135,7 +131,8 @@ class photon(IParticle):
         theta_s_ = np.arctan(py_s/px_s)
         phi_s = np.arcsin(pz_s/pX_s)
         #print(py_s, px_s, theta_s, phi_s)
-        #if abs(P_el**2 - px_el**2 - py_el**2 - pz_el**2) > 1: #most of these are smaller than 9, but some are like 100000? not sure what's going on there
+        if abs(P_el**2 - px_el**2 - py_el**2 - pz_el**2) > 10: #most of these are smaller than 1, but some are like 100000? not sure what's going on there
+            return 3, 1, 1, 1, np.sqrt(3), 0, 0 #FUCK this is  like most of them!!!
         #    print(pX_s, pY_s, px_s, py_s, pz_s, theta_s)#I think how I handle sign changes over theta is wrong
  
         return comptonelectron.get_energy(fano), px_s, py_s, pz_s, Ef, theta_s_, phi_s
