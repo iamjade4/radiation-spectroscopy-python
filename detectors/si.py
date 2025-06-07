@@ -27,7 +27,7 @@ class Si(IDetector):
         )
 
         
-    def detects_batch(self, origins, directions, theta, phi, E, batch_size):
+    def detects_batch(self, origins, directions, theta, phi, E, batch_size, totals, bad):
         electrons = []
         xc, yc, zc, xf, yf, zf = self._bounds
         bound_min = np.array([xc, yc, zc])
@@ -59,7 +59,6 @@ class Si(IDetector):
                 #Silicon detectors are generally more suited to direct detection of charged particles, and not necessarily of photons due to their much smaller detector volume compared to that of scintillators. For now however, for the sake of comparison of energy resolutions, I will keep the photoelectric method here
 
         #print(positions)
-        
-        return tclose <= tfar, electrons #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
+        return tclose <= tfar, electrons, totals, bad #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
             
         

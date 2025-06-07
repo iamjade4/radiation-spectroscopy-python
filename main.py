@@ -17,8 +17,9 @@ SIMULATION_CONFIG = {
     "hist_range": (0, 1024)
 }
 plt.rcParams['axes.xmargin'] = 0
-
-def simulate(n_photons: int, batch_size: int, E: float, detectors: list):
+totals = 0
+bad = 0 #Debug variables
+def simulate(n_photons: int, batch_size: int, E: float, detectors: list, totals, bad):
     detected_counts = [0] * len(detectors)
     energies = [[] for i in detectors]
 
@@ -29,10 +30,10 @@ def simulate(n_photons: int, batch_size: int, E: float, detectors: list):
         origins = np.zeros((batch_size, 3))
 
         for idx, det in enumerate(detectors):
-            mask, batch_energies = det.detects_batch(origins, directions, theta, phi, E, batch_size)
+            mask, batch_energies, totals, bad = det.detects_batch(origins, directions, theta, phi, E, batch_size, totals, bad)
             detected_counts[idx] += np.sum(mask)
             energies[idx].extend(batch_energies) # this adds the cumulative data, previously you were only plotting the last batch (unless thats what you wanted to do in which case, sorry)
-
+    print(bad/totals *100, "Percentage of 'bad' scatters")
     return detected_counts, energies
 
 def plot_spectra(energies: list, bins: int = 1024, energy_range=(0, 1000)):
@@ -51,7 +52,7 @@ def main():
         NaITl(100, 100, 0, 60, 60, 60),  # 6x6x6cm NaITl
         Si(100, 0, 100, 60, 60, 2)       # 6x6x0.2cm Si (silicon detector is thin)
     ]
-    detected_counts, energies = simulate(cfg["n_photons"], cfg["batch_size"], cfg["E"], detectors)
+    detected_counts, energies = simulate(cfg["n_photons"], cfg["batch_size"], cfg["E"], detectors, totals, bad)
     for idx, count in enumerate(detected_counts, start=1):
         print(f"detected {count} photons")
     fig = plot_spectra(energies, bins=cfg["bins"], energy_range=cfg["hist_range"])

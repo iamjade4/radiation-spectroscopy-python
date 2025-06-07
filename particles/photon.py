@@ -93,6 +93,8 @@ class photon(IParticle):
     def comptonscatter(theta, phi, energy, x, y, z, t, fano, angles):
         #Ef = Ei/(1 + (Ei/me*c**2)(1-costheta)) where Ef is the energy of the final photon -> therefore energy deposited into the electron is Ei - Ef
         #Theta in the above statement is not the same as the theta taken as an argument. The theta in the calculation is the scattered angle, not the initial angle
+        if theta < 0:
+            theta+=2*np.pi
         cos_theta = np.cos(theta)
         sin_theta = np.sin(theta)
         cos_phi = np.cos(phi)
@@ -114,12 +116,12 @@ class photon(IParticle):
         P_el = math.sqrt(P_i**2-Ps**2)
         #conservation of momentum
         #Pi = Ps + Pe --> Pe = Pi - Ps
-        if (theta_s*cos_phi + theta > np.pi/2 and theta_s*cos_phi +theta < 3*np.pi/2):
-            pX_s = -pX_s
-        #if theta_s*cos_phi + theta > 3*np.pi/2:
+        #if (theta_s > np.pi/2 and theta_s < 3*np.pi/2 and (theta < np.pi/2 or theta > 3*np.pi/2)) or ((theta_s < np.pi/2 or theta_s > 3*np.pi/2 ) and theta > np.pi/2 and theta < 3*np.pi/2):
+        #    pX_s = -pX_s
+        #if (theta < np.pi and theta_s > np.pi/2 and theta_s < 3*np.pi/2) or (theta > np.pi and (theta_s < np.pi/2 or theta_s > 3*np.pi/2)):
         #    pY_s = -pY_s
-        px_s = pX_s*cos_theta*cos_phi - pY_s*abs(sin_theta)#converting from the cme frame to the origin frame
-        py_s = pX_s*sin_theta*cos_phi + pY_s*abs(cos_theta)
+        px_s = pX_s*abs(cos_theta)*cos_phi - pY_s*abs(sin_theta)#converting from the cme frame to the origin frame
+        py_s = pX_s*abs(sin_theta)*cos_phi + pY_s*abs(cos_theta)
         pz_s = pX_s*sin_phi
         
         px_el = math.sqrt(abs(px_i**2 - px_s**2))#domain error --> ps > pi ? possibly small rounding error stuff bc everything else seeeems okayy
@@ -132,10 +134,13 @@ class photon(IParticle):
         phi_s = np.arcsin(pz_s/pX_s)
         #print(py_s, px_s, theta_s, phi_s)
         if abs(P_el**2 - px_el**2 - py_el**2 - pz_el**2) > 10: #most of these are smaller than 1, but some are like 100000? not sure what's going on there
-            return 3, 1, 1, 1, np.sqrt(3), 0, 0 #FUCK this is  like most of them!!!
-        #    print(pX_s, pY_s, px_s, py_s, pz_s, theta_s)#I think how I handle sign changes over theta is wrong
- 
-        return comptonelectron.get_energy(fano), px_s, py_s, pz_s, Ef, theta_s_, phi_s
+            total = 1
+            bad = 1
+            #print(pX_s, pY_s, px_s, py_s, pz_s, theta_s, theta)#I think how I handle sign changes over theta is wrong            
+            return 3, 1, 1, 1, np.sqrt(3), 0, 0, total, bad #FUCK this is  like most of them!!!
+        bad = 0
+        total = 1
+        return comptonelectron.get_energy(fano), px_s, py_s, pz_s, Ef, theta_s_, phi_s, total, bad
 
         
         
