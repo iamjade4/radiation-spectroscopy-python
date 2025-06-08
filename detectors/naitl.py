@@ -1,8 +1,10 @@
 import numpy as np
 from interfaces import IDetector, IParticle
 from particles.photon import photon
+import math
 fano = 1 #This is intrinsic to scintillators in general, so will be defined here. Maybe if I make a parent class of Scintillator I could provide it there as the Fano factor tends to be 1 for all scintillators
 Z_n = 53 #atomic number of Iodine. Can't remember if this is supposed to be for Iodine or for the activator. I assume Iodine but the result is so so smalllll
+n = 1.474*10**22#number desity
 class NaITl(IDetector):
     def __init__(self, x, y, z, X, Y, Z):
         #Lowercase are the minumum bound position and uppercase are the dimensions
@@ -15,6 +17,8 @@ class NaITl(IDetector):
         self.Z = Z
         self._bounds = self._calculate_bounds()
         self.fano = fano #This allows multiple detector types to be called at once by removing the need for fano to remain a single value, it is now inherent to the detector's instance
+        self.Z_n = Z_n
+        self.n = n
 
     def _calculate_bounds(self):
         return (
@@ -67,36 +71,44 @@ class NaITl(IDetector):
         else:
             photo_csc = photon.photoelectric_csc_mid(Z_n, E)
         compton_csc = photon.comptonscatter_csc(E)
-        total = compton_csc + photo_csc
-        threshold = photo_csc/total
+        total_csc = compton_csc + photo_csc
+        threshold = photo_csc/total_csc
         #print(compton_csc, photo_csc) the photoelectric crosssection seems sooooo small for high energies but i guess that makes sense
+        total = 0
         for i in range(batch_size):
             if tclose[i] <= tfar[i]:
                 #Going to compute interaction probability based off of photon cross sections
-                random = np.random.rand()
-                if random <= threshold: #my photopeak..... so so small
-                    electron_E = (photon.photoelectric(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano))  
-                    electrons.append(electron_E)
-                    compton_bool = False
-                else:
-                    electron = (photon.comptonscatter(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano, angles))
-                    compton_E.append(electron[0])
-                    compton += 1
-                    photon_s_px.append(electron[1])
-                    photon_s_py.append(electron[2])
-                    photon_s_pz.append(electron[3])
-                    photon_s_E.append(electron[4])
-                    photon_s_theta.append(electron[5])
-                    photon_s_phi.append(electron[6])
-                    totals += electron[7]
-                    bad += electron[8] #debugging
-                    photon_s_x.append(x[i])
-                    photon_s_y.append(y[i])
-                    photon_s_z.append(z[i]) #this sucks
-                    #the scattered photon from compton scattering
-                    compton_bool = True
+                dist = (tfar[i]-tclose[i])/10 #distance travelled inside of the detector (cm)
+                lifetime = 1/(n*total_csc*10**-14*3) #10^-14 since 1 barn  = 10^-24 cm^2, and c = 3*10^10 cm/s 
+                probability = 1 - np.e**(-dist/(lifetime*3*10**10))  #Need to check this since it seems very high?
+                interaction_threshold = np.random.rand()
+                interaction_type = np.random.rand() 
+                #print(probability)
+                if interaction_threshold <= probability:
+                    total+=1
+                    if interaction_type <= threshold: #my photopeak..... so so small
+                        electron_E = (photon.photoelectric(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano))  
+                        electrons.append(electron_E)
+                        compton_bool = False
+                    else:
+                        electron = (photon.comptonscatter(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano, angles))
+                        compton_E.append(electron[0])
+                        compton += 1
+                        photon_s_px.append(electron[1])
+                        photon_s_py.append(electron[2])
+                        photon_s_pz.append(electron[3])
+                        photon_s_E.append(electron[4])
+                        photon_s_theta.append(electron[5])
+                        photon_s_phi.append(electron[6])
+                        totals += electron[7]
+                        bad += electron[8] #debugging
+                        photon_s_x.append(x[i])
+                        photon_s_y.append(y[i])
+                        photon_s_z.append(z[i]) #this sucks
+                        #the scattered photon from compton scattering
+                        compton_bool = True
         if compton > 0:
-            print(compton, "photons scattered in this batch") #Debug
+            #print(compton, "photons scattered in this batch") #Debug
             origins = photon_s_x, photon_s_y, photon_s_z
             origins = np.transpose(origins)
             directions = photon_s_px, photon_s_py, photon_s_pz
@@ -121,7 +133,7 @@ class NaITl(IDetector):
                     bad += electron [9]
                     #print(electron_E + photon_s_E[i]) #this should always be 662. But it isnt!
                 electrons.append(electron_E)
-        return tclose <= tfar, electrons, totals, bad#The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
+        return tclose <= tfar, electrons, totals, bad, total#The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
             
     def detects_single(self, origins, directions, thetas, phis, E, electron, t, i, angles, totals, bad): #this is just for compton photons        
         #Doesn't need to go through the detection algorithm, we already know it is in the detector (this will change when penetration into a detector is considered)
