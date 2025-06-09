@@ -35,7 +35,7 @@ def simulate(n_photons: int, batch_size: int, E: float, detectors: list, totals,
             total[idx] +=np.sum(total_dtd)
             detected_counts[idx] += np.sum(mask)
             energies[idx].extend(batch_energies) # this adds the cumulative data, previously you were only plotting the last batch (unless thats what you wanted to do in which case, sorry)
-        print(i/batch_size+1,"/",(n_photons/batch_size), "batches simulated")
+        print(i/batch_size+1,"/",(n_photons/batch_size), "batches simulated", end='\r')
     print(bad/totals *100, "Percentage of 'bad' scatters")
     return detected_counts, energies, total
 

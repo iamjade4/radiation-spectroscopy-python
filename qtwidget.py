@@ -7,9 +7,9 @@ class MyWidget(Qtwdgt.QWidget):
     def __init__(self, fig):
         super().__init__()
         self.text = Qtwdgt.QLabel("hello world", alignment=Qtcre.Qt.AlignCenter)
-        self.toolbar = Figcan(fig)
+        self.figure = Figcan(fig)
         
         self.layout = Qtwdgt.QVBoxLayout(self)
         self.layout.addWidget(self.text)
-        self.layout.addWidget(self.toolbar)
+        self.layout.addWidget(self.figure)
 
