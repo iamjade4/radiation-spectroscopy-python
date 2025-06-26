@@ -29,7 +29,7 @@ class NaITl(IDetector):
         )
 
         
-    def detects_batch(self, origins, directions, theta, phi, E, batch_size, totals, bad):
+    def detects_batch(self, origins, directions, theta, phi, E, batch_size):
         compton_bool = False
         compton = 0 #number of compton scattered photons. It will be used to recursively call detects_batch for multiple scatters.
         photon_s_px = []
@@ -108,8 +108,8 @@ class NaITl(IDetector):
                         photon_s_E.append(electron[4])
                         photon_s_theta.append(electron[5])
                         photon_s_phi.append(electron[6])
-                        totals += electron[7]
-                        bad += electron[8] #debugging
+                        #totals += electron[7]
+                        #bad += electron[8] #debugging
                         photon_s_x.append(x_int)
                         photon_s_y.append(y_int)
                         photon_s_z.append(z_int) #this sucks
@@ -128,7 +128,7 @@ class NaITl(IDetector):
                 while compton_bool == True:
                     #print(electron_E, photon_s_E[i], j)
                     j +=1
-                    electron = (self.detects_single(origins[i], directions[i], photon_s_theta[i], photon_s_phi[i], photon_s_E[i], electrons, tclose_det[i], i, angles, totals, bad)) #recursively calling the method for each scattered photon. HORRIBLY inefficient but since the energies are different, each photon needs to be called inidividually
+                    electron = (self.detects_single(origins[i], directions[i], photon_s_theta[i], photon_s_phi[i], photon_s_E[i], electrons, tclose_det[i], i, angles)) #recursively calling the method for each scattered photon. HORRIBLY inefficient but since the energies are different, each photon needs to be called inidividually
                     electron_E += electron[0]
                     compton_bool = electron[1]
                     if compton_bool == False:
@@ -137,13 +137,12 @@ class NaITl(IDetector):
                     photon_s_E[i]= electron[5]
                     photon_s_theta[i] = electron[6]
                     photon_s_phi[i] = electron[7]
-                    totals += electron[8]
-                    bad += electron [9]
-                    #print(electron_E + photon_s_E[i]) #this should always be 662. But it isnt!
+                    #totals += electron[8]
+                    #bad += electron [9]
                 electrons.append(electron_E)
-        return tclose <= tfar, electrons, totals, bad, total#The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
+        return tclose <= tfar, electrons, total#The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
             
-    def detects_single(self, origin, direction, theta, phi, E, electron, t, i, angles, totals, bad): #this is just for compton photons        
+    def detects_single(self, origin, direction, theta, phi, E, electron, t, i, angles): #this is just for compton photons        
         #Doesn't need to go through the detection algorithm, we already know it is in the detector (this will change when penetration into a detector is considered)
             #hi this is changing now
         xc, yc, zc, xf, yf, zf = self._bounds
@@ -193,6 +192,6 @@ class NaITl(IDetector):
                 electron = (photon.comptonscatter(theta, phi, E, x_int, y_int, z_int, t, self.fano, angles))
                 compton_bool = True
                 electron_E = electron[0]    
-                return electron_E, compton_bool, electron[1], electron[2], electron[3], electron[4], electron[5], electron[6], totals, bad
+                return electron_E, compton_bool, electron[1], electron[2], electron[3], electron[4], electron[5], electron[6]
         else:
             return(0, 0)

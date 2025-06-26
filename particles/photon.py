@@ -61,7 +61,8 @@ class photon(IParticle):
     def gen_angles(energy, batch_size):
         theta_s = np.linspace(0, np.pi, batch_size)
         angle_energies = np.linspace(energy, energy, num = batch_size)
-        dstr = photon.f(theta_s, angle_energies, photon.E_s(theta_s, angle_energies))/5069938.428811579 #to add to 1
+        dstr = photon.f(theta_s, angle_energies, photon.E_s(theta_s, angle_energies))
+        dstr = dstr/sum(dstr) #normalise
         angle_array = np.random.choice(theta_s, size=batch_size, p=dstr) #changed to np.random.choice from random.choices due to an internal value error in random
         return(angle_array)
     def photoelectric(thetas, phis, energy, x, y, z, t, fano): #photons will have a chance to undergo the photoelectric effect when detected. They create an electron with the same energy as the incident photon (-the binding energy but that is negligible so will be ignored for now)
@@ -106,20 +107,14 @@ class photon(IParticle):
         theta_s = random.choice(angles) #using the defined distribution to choose a weighted angle. This is a bit slow but that's ok
         Ef = energy/(1 + (energy/511)*(1-np.cos(theta_s)))
         Ps = Ef
-        #pz_s = Ef * sin_phi_s
+
         pX_s = Ef * np.cos(theta_s)#These are not on the same axis as px_i and py_i. These are on a plane that follows P_i. P_i is parallel to pX_s
         pY_s = Ef * np.sin(theta_s)
-        #if theta_s > np.pi:
-        #    pY_s = -pY_s
+
         E_el = (energy - Ef) + m_e #E**2 = P**2 + m**2 where P here is energy and Ef
         KE_el = energy-Ef
         P_el = math.sqrt((KE_el)**2+2*m_e*KE_el) #This is correct i believe
-        #P_el = math.sqrt(P_i**2-Ps**2)
-        #conservation of momentum
-        #if (theta_s > np.pi/2 and theta_s < 3*np.pi/2 and (theta < np.pi/2 or theta > 3*np.pi/2)) or ((theta_s < np.pi/2 or theta_s > 3*np.pi/2 ) and theta > np.pi/2 and theta < 3*np.pi/2):
-        #    pX_s = -pX_s
-        #if (theta < np.pi and theta_s > np.pi/2 and theta_s < 3*np.pi/2) or (theta > np.pi and (theta_s < np.pi/2 or theta_s > 3*np.pi/2)):
-        #    pY_s = -pY_s
+
         px_s = pX_s*cos_theta*cos_phi - pY_s*sin_theta#converting from the cme frame to the origin frame
         py_s = pX_s*sin_theta*cos_phi + pY_s*cos_theta
         pz_s = pX_s*sin_phi
@@ -132,13 +127,9 @@ class photon(IParticle):
         theta_s_ = np.arctan(py_s/px_s)
         phi_s = np.arcsin(pz_s/pX_s)
         #print(py_s, px_s, theta_s, phi_s)
-        if abs(P_el**2 - px_el**2 - py_el**2 - pz_el**2) > 1:
-            total = 1
-            bad = 1       
-            return KE_el, px_s, py_s, pz_s, Ef, theta_s_, phi_s, total, bad
-        bad = 0
-        total = 1
-        return KE_el, px_s, py_s, pz_s, Ef, theta_s_, phi_s, total, bad #returning KE_el since that's the energy that gets deposited by the electron
+        #if abs(P_el**2 - px_el**2 - py_el**2 - pz_el**2) > 1: 
+        #    return KE_el, px_s, py_s, pz_s, Ef, theta_s_, phi_s#, total, bad
+        return KE_el, px_s, py_s, pz_s, Ef, theta_s_, phi_s#, total, bad #returning KE_el since that's the energy that gets deposited by the electron
 
         
         
