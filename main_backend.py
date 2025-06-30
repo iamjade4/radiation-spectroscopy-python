@@ -44,7 +44,7 @@ def plot_spectra(energies: list, bins: int = 1024, energy_range=(0, 1000)):
     for i, (ax, detector_energies) in enumerate(zip(axs.flat, energies)):
         ax.hist(detector_energies, bins=bins, range=energy_range, histtype='step')
     plt.tight_layout()
-    plt.show() 
+    #plt.show() 
     return fig
 
 
