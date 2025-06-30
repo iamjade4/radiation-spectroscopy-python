@@ -1,21 +1,21 @@
 from particles.photon import photon
 from detectors.naitl import NaITl
 from detectors.si import Si
-from qtwidget import MyWidget
-#from particles.electron import electron
+#from qtwidget import MainWindow
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from PyQt5 import QtCore as Qtcre, QtWidgets as Qtwdgt, QtGui as Qtgui
+from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, QComboBox, QVBoxLayout
 import sys
 
-SIMULATION_CONFIG = {
-    "E": input("Enter the energy of the source in keV (Default value:662):") or 662,  # Energies are in keV, natural units are assumed, distances are in mm for now (for the sake of dimensions of detectors), 1eV = 1.66e10-19J
-    "n_photons": 10_000_000,
-    "batch_size": 100_000,
-    "bins": 1024,
-    "hist_range": (0, 1024)
-}
+#SIMULATION_CONFIG = {
+#    "E": input("Enter the energy of the source in keV (Default value:662):") or 662,  # Energies are in keV, natural units are assumed, distances are in mm for now (for the sake of dimensions of detectors), 1eV = 1.66e10-19J
+#    "n_photons": 10_000_000,
+#    "batch_size": 100_000,
+#    "bins": 1024,
+#    "hist_range": (0, 1024)
+#}
 plt.rcParams['axes.xmargin'] = 0
 totals = 0
 bad = 0 #Debug variables
@@ -48,28 +48,24 @@ def plot_spectra(energies: list, bins: int = 1024, energy_range=(0, 1000)):
     return fig
 
 
-def main():
-    cfg = SIMULATION_CONFIG
+def main(n_photons, batch_size, E):
+    #if not Qtwdgt.QApplication.instance():
+    #    app = Qtwdgt.QApplication([])
+    #else:
+    #    app = Qtwdgt.QApplication.instance()  
+    #cfg = SIMULATION_CONFIG
     detectors = [
         NaITl(100, 100, 0, 60, 60, 60),  # 6x6x6cm NaITl
         Si(100, 0, 100, 60, 60, 2)       # 6x6x0.2cm Si (silicon detector is thin)
     ]
-    detected_counts, energies, total = simulate(cfg["n_photons"], cfg["batch_size"], float(cfg["E"]), detectors)
+    detected_counts, energies, total = simulate(n_photons, batch_size, E, detectors)
     for idx, count in enumerate(detected_counts, start=1):
         print(total[idx-1]/count *100, "% Detector efficiency")
         print(f"detected {count} photons")
-    fig = plot_spectra(energies, bins=cfg["bins"], energy_range=cfg["hist_range"])
-    if not Qtwdgt.QApplication.instance():
-        app = Qtwdgt.QApplication([])
-    else:
-        app = Qtwdgt.QApplication.instance()
-    widget = MyWidget(fig)
-    widget.resize(1400, 800)
-    widget.show()
-    
-    exit_code = app.exec()
-    sys.exit(exit_code)
-        
+    fig = plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
+    return fig
 
-if __name__ == '__main__':
-    main()
+
+
+#if __name__ == '__main__':
+#    MainWindow()
