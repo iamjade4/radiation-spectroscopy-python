@@ -1,9 +1,17 @@
 #GUI
 import sys
 from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, QComboBox, QGridLayout, QSlider, QLabel
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, QComboBox, QGridLayout, QSlider, QLabel, QProgressBar
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
-from main_backend import main
+from particles.photon import photon
+from detectors.naitl import NaITl
+from detectors.si import Si
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+plt.rcParams['axes.xmargin'] = 0
 
 class MainWindow(QMainWindow):
     def __init__(self):#
@@ -59,7 +67,7 @@ class MainWindow(QMainWindow):
         
         #Start button
         start_button = QPushButton("Start")
-        start_button.clicked.connect(self.run_main)
+        start_button.clicked.connect(self.main) #This runs the main that was from the backend
         start_button.setFixedHeight(30)
         layout.addWidget(start_button,6,0)
         #layout.addStretch(1)
@@ -85,10 +93,56 @@ class MainWindow(QMainWindow):
     
     def energy_update(self, E):
         self.E_box.setText("Energy: "+str(E)+"keV")
-        self.E = int(E)
+        self.E = int(E)        
         
-    def run_main(self):
-        fig = main(self.n_photons, self.batch_size, self.E)
+    def simulate(self, n_photons: int, batch_size: int, E: float, detectors: list):
+        total = [0] * len(detectors)
+        detected_counts = [0] * len(detectors)
+        energies = [[] for i in detectors]
+
+        for i in range(0, n_photons, batch_size):
+            theta = np.random.uniform(0, 2 * np.pi, batch_size)
+            phi = np.random.uniform(-np.pi/2, np.pi/2, batch_size)
+            directions = photon.batch_calculate_direction(theta, phi)
+            origins = np.zeros((batch_size, 3))
+
+            for idx, det in enumerate(detectors):
+                mask, batch_energies, total_dtd = det.detects_batch(origins, directions, theta, phi, E, batch_size)
+                total[idx] +=np.sum(total_dtd)
+                detected_counts[idx] += np.sum(mask)
+                energies[idx].extend(batch_energies) # this adds the cumulative data, previously you were only plotting the last batch (unless thats what you wanted to do in which case, sorry)
+            print(i/batch_size+1,"/",(n_photons/batch_size), "batches simulated", end='\r')
+            progress=  (i/batch_size+1)/(n_photons/batch_size)
+            app.processEvents()
+            self.batch_prog.setValue(int(progress*100))
+        return detected_counts, energies, total
+
+    def plot_spectra(self, energies: list, bins: int = 1024, energy_range=(0, 1000)):
+        num_det = len(energies)
+        fig, axs = plt.subplots(num_det, 1, figsize=(10, 4 * num_det), squeeze=False)
+        for i, (ax, detector_energies) in enumerate(zip(axs.flat, energies)):
+            ax.hist(detector_energies, bins=bins, range=energy_range, histtype='step')
+        plt.tight_layout()
+        #plt.show() 
+        return fig
+
+
+    def main(self):
+        E = self.E
+        batch_size = self.batch_size
+        n_photons = self.n_photons
+        self.batch_prog = QProgressBar()
+        self.layout.addWidget(self.batch_prog,7,0)
+        self.layout.setRowStretch(self.layout.rowCount(), 1)
+        detectors = [
+            NaITl(100, 100, 0, 60, 60, 60),  # 6x6x6cm NaITl
+            Si(100, 0, 100, 60, 60, 2)       # 6x6x0.2cm Si (silicon detector is thin)
+        ]
+        detected_counts, energies, total = self.simulate(n_photons, batch_size, E, detectors)
+        for idx, count in enumerate(detected_counts, start=1):
+            print(total[idx-1]/count *100, "% Detector efficiency")
+            print(f"detected {count} photons")
+        fig = self.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
         self.display_fig(fig)
 
 app = QApplication(sys.argv)
