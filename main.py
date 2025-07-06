@@ -52,7 +52,7 @@ class MainWindow(QMainWindow):
         
         #Energy slider
         self.energy = QSlider(Qt.Orientation.Horizontal, self)
-        self.energy.setRange(0,1000)
+        self.energy.setRange(1,1000) # changed the lowest value to 1 because 0 crashes the program -K
         self.energy.setSingleStep(1)
         self.energy.setFixedHeight(30)
         self.energy.setValue(662)
@@ -61,7 +61,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.energy,5,0)
         
         #Energy label
-        self.E_box = QLabel("Energy: "+str(self.E)+"keV")
+        self.E_box = QLabel("Energy: "+str(self.E)+"keV (Default = 662keV)")
         self.E_box.setFixedHeight(30)
         layout.addWidget(self.E_box,4,0)
         
@@ -77,9 +77,10 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(layout)
         self.setCentralWidget(widget)
+
     def n_photons_drop(self, n):
         self.n_photons = int(n)
-        print(self.n_photons)
+        print("photons:", self.n_photons)
 
     
     def display_fig(self, fig):
@@ -89,13 +90,16 @@ class MainWindow(QMainWindow):
         
     def batch(self, b):
         self.batch_size = int(b)
-        print(self.batch_size)
+        print("batch size:", self.batch_size)
     
     def energy_update(self, E):
-        self.E_box.setText("Energy: "+str(E)+"keV")
+        self.E_box.setText("Energy: "+str(E)+"keV (Default = 662keV)")
         self.E = int(E)        
         
     def simulate(self, n_photons: int, batch_size: int, E: float, detectors: list):
+        if E==0:
+            print("WARNING. 0 PASSED INTO E.")
+
         total = [0] * len(detectors)
         detected_counts = [0] * len(detectors)
         energies = [[] for i in detectors]
