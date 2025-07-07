@@ -23,6 +23,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Radiation Spectroscopy Sim")
         layout = QGridLayout()
         self.layout= layout
+        self.running = False
 
         #First box and text
         photon_drop = QComboBox(self)
@@ -132,22 +133,35 @@ class MainWindow(QMainWindow):
 
 
     def main(self):
-        E = self.E
-        batch_size = self.batch_size
-        n_photons = self.n_photons
-        self.batch_prog = QProgressBar()
-        self.layout.addWidget(self.batch_prog,7,0)
-        self.layout.setRowStretch(self.layout.rowCount(), 1)
-        detectors = [
-            NaITl(100, 100, 0, 60, 60, 60),  # 6x6x6cm NaITl
-            Si(100, 0, 100, 60, 60, 2)       # 6x6x0.2cm Si (silicon detector is thin)
-        ]
-        detected_counts, energies, total = self.simulate(n_photons, batch_size, E, detectors)
-        for idx, count in enumerate(detected_counts, start=1):
-            print(total[idx-1]/count *100, "% Detector efficiency")
-            print(f"detected {count} photons")
-        fig = self.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
-        self.display_fig(fig)
+        if self.running == False:
+            self.patience = 1
+            self.running = True
+            E = self.E
+            batch_size = self.batch_size
+            n_photons = self.n_photons
+            self.batch_prog = QProgressBar()
+            self.layout.addWidget(self.batch_prog,7,0)
+            self.layout.setRowStretch(self.layout.rowCount(), 1) #This is what resizes the graph when ran again but it stops the left column from restretching
+            detectors = [
+                NaITl(100, 100, 0, 60, 60, 60),  # 6x6x6cm NaITl
+                Si(100, 0, 100, 60, 60, 2)       # 6x6x0.2cm Si (silicon detector is thin)
+            ]
+            detected_counts, energies, total = self.simulate(n_photons, batch_size, E, detectors)
+            for idx, count in enumerate(detected_counts, start=1):
+                print(total[idx-1]/count *100, "% Detector efficiency")
+                print(f"detected {count} photons")
+            fig = self.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
+            self.display_fig(fig)
+            self.running = False
+            if self.patience == 0: #Remove the label if it has been made
+                self.layout.removeWidget(self.patient)
+                self.patient.deleteLater()
+                self.patient = None
+        else:
+            if self.patience != 0:
+                self.patience = 0
+                self.patient = QLabel("Be patient") #Happens if a user presses "Start" while the program is currently running
+                self.layout.addWidget(self.patient, 8, 0)
 
 app = QApplication(sys.argv)
 window = MainWindow()
