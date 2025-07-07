@@ -160,8 +160,12 @@ class MainWindow(QMainWindow):
         else:
             if self.patience != 0:
                 self.patience = 0
-                self.patient = QLabel("Be patient") #Happens if a user presses "Start" while the program is currently running
+                self.patient = QLabel("<a href=\"https://jokerquotes.xyz\">'Be Patient'</a>" ) #Happens if a user presses "Start" while the program is currently running
+                self.patient.setOpenExternalLinks(True)
                 self.layout.addWidget(self.patient, 8, 0)
+                
+    def closeEvent(self,event):
+        raise SystemExit(0)
 
 app = QApplication(sys.argv)
 window = MainWindow()
