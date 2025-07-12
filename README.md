@@ -4,3 +4,8 @@ Isotropic source with particle tracking. Gamma ray sources will produce particle
 
 I will start by using an open source that is immune to self-absorption, and acts as a pure gamma source. Along the line I would like to take into consideration the effects of self-absorption, especially for charged particle sources where this may be significant. 
 
+Required python dependencies:
+- Matplotlib
+- Numpy
+- Scipy
+- PyQT5
