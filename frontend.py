@@ -1,138 +1,176 @@
 import sys
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, QComboBox, QGridLayout, QSlider, QLabel, QProgressBar
+from multiprocessing import Manager
+from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
-import backend
-
-import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
+import backend
 
 plt.rcParams['axes.xmargin'] = 0
 
+class SimWorker(QObject):
+    finished = pyqtSignal(object, object, object)
+    def __init__(self, n_photons, batch_size, E, detectors, progress_value):
+        super().__init__()
+        self.n_photons = n_photons
+        self.batch_size = batch_size
+        self.E = E
+        self.detectors = detectors
+        self.progress_value = progress_value
+
+    def run(self):
+        result = backend.simulate(self.n_photons, self.batch_size, self.E, self.detectors, progress_value=self.progress_value)
+        self.finished.emit(*result)
+
 class MainWindow(QMainWindow):
     def __init__(self):
-        #Defaults
-        self.E = 662 #keV
-        self.batch_size =100_000
-        self.n_photons = 10_000_000
         super().__init__()
         self.setWindowTitle("Radiation Spectroscopy Sim")
-        layout = QGridLayout()
-        self.layout= layout
         self.running = False
+        self.patience = 1
+        self.patient = None
+        self.batch_prog = None
+        self.figure_canvas = None
+        
+        #defaults
+        self.E = 662 #keV
+        self.batch_size = 100_000
+        self.n_photons = 10_000_000
+
+        self.manager = None
+        self.progress_value = None
+        self.main_layout = QHBoxLayout()
+
+        #left controls layout
+        self.left_widget = QWidget()
+        self.left_layout = QVBoxLayout()
+        self.left_widget.setLayout(self.left_layout)
 
         #First box and text
-        photon_drop = QComboBox(self)
-        photon_drop.addItem("1_000_000")
-        photon_drop.addItem("10_000_000")
-        photon_drop.addItem("100_000_000")
+        photon_drop = QComboBox()
+        photon_drop.addItems(["1_000_000", "10_000_000", "100_000_000"])
+        photon_drop.setCurrentText("10_000_000")
         photon_drop.currentTextChanged.connect(self.n_photons_drop)
         photon_drop.setFixedHeight(30)
-        photon_drop.setCurrentText("10_000_000")
         photons_label = QLabel("Number of photons (Default = 10,000,000):")
         photons_label.setFixedHeight(30)
-        layout.addWidget(photons_label,0,0)
-        layout.addWidget(photon_drop,1,0)
-        
+
         #Second box and text
-        batch_select = QComboBox(self)
-        batch_select.addItem("1_000")
-        batch_select.addItem("10_000")
-        batch_select.addItem("100_000")
+        batch_select = QComboBox()
+        batch_select.addItems(["1_000", "10_000", "100_000"])
+        batch_select.setCurrentText("100_000")
         batch_select.currentTextChanged.connect(self.batch)
         batch_select.setFixedHeight(30)
-        batch_select.setCurrentText("100_000")
         batches_label = QLabel("Number of photons per batch (Default = 100,000):")
         batches_label.setFixedHeight(30)
-        layout.addWidget(batches_label,2,0)
-        layout.addWidget(batch_select,3,0)
-        
+
         #Energy slider
-        self.energy = QSlider(Qt.Orientation.Horizontal, self)
-        self.energy.setRange(1,1000) # changed the lowest value to 1 because 0 crashes the program -K
-        self.energy.setSingleStep(1)
-        self.energy.setFixedHeight(30)
+        self.energy = QSlider(Qt.Horizontal)
+        self.energy.setRange(1, 1000) #changed the lowest value to 1 because 0 crashes the program -K
         self.energy.setValue(662)
-        self.E = self.energy.value()
+        self.energy.setFixedHeight(30)
         self.energy.valueChanged.connect(self.energy_update)
-        layout.addWidget(self.energy,5,0)
-        
+
         #Energy label
-        self.E_box = QLabel("Energy: "+str(self.E)+"keV (Default = 662keV)")
+        self.E_box = QLabel(f"Energy: {self.E} keV (Default = 662 keV)")
         self.E_box.setFixedHeight(30)
-        layout.addWidget(self.E_box,4,0)
-        
+
         #Start button
         start_button = QPushButton("Start")
         start_button.clicked.connect(self.main) #This runs the main that was from the backend
         start_button.setFixedHeight(30)
-        layout.addWidget(start_button,6,0)
-        #layout.addStretch(1)
-        layout.setRowStretch(layout.rowCount(), 1)
-        layout.setColumnStretch(layout.columnCount(), 1)
-        ### creating widget with layout ###
-        widget = QWidget()
-        widget.setLayout(layout)
-        self.setCentralWidget(widget)
+
+
+        #:broken_heart::wilted_rose:
+        self.left_layout.addWidget(photons_label)
+        self.left_layout.addWidget(photon_drop)
+        self.left_layout.addWidget(batches_label)
+        self.left_layout.addWidget(batch_select)
+        self.left_layout.addWidget(self.E_box)
+        self.left_layout.addWidget(self.energy)
+        self.left_layout.addWidget(start_button)
+        self.batch_prog = QProgressBar()
+        self.left_layout.addWidget(self.batch_prog)
+        self.left_layout.addStretch()
+        #right widget placeholder for matplotlib
+        self.right_widget = QWidget()
+        self.right_layout = QVBoxLayout()
+        self.right_widget.setLayout(self.right_layout)
+        #combining into the main layout
+        self.main_layout.addWidget(self.left_widget, 1)
+        self.main_layout.addWidget(self.right_widget, 4)
+        container = QWidget()
+        container.setLayout(self.main_layout)
+        self.setCentralWidget(container)
+        self.progress_timer = QTimer()
+        self.progress_timer.timeout.connect(self.poll_progress)
 
     def n_photons_drop(self, n):
-        self.n_photons = int(n)
-        print("photons:", self.n_photons)
+        self.n_photons = int(n.replace("_", ""))
 
-    
     def display_fig(self, fig):
-        figure = Figcan(fig)
-        height = self.layout.rowCount()
-        self.layout.addWidget(figure,0,1,height,3)
-        
+        if self.figure_canvas:
+            self.right_layout.removeWidget(self.figure_canvas)
+            self.figure_canvas.deleteLater()
+        self.figure_canvas = Figcan(fig)
+        self.right_layout.addWidget(self.figure_canvas)
+
     def batch(self, b):
-        self.batch_size = int(b)
-        print("batch size:", self.batch_size)
-    
+        self.batch_size = int(b.replace("_", ""))
+
     def energy_update(self, E):
-        self.E_box.setText("Energy: "+str(E)+"keV (Default = 662keV)")
-        self.E = int(E)        
-        
-    def simulate(self, n_photons: int, batch_size: int, E: float, detectors: list):
-        def progress_callback(val):
+        self.E = E
+        self.E_box.setText(f"Energy: {E} keV (Default = 662 keV)")
+
+    def poll_progress(self):
+        if self.progress_value:
+            val = self.progress_value.value
             self.batch_prog.setValue(val)
-            QApplication.processEvents()
-            
-        return backend.simulate(n_photons, batch_size, E, detectors, progress_callback)
-
-    def plot_spectra(self, energies: list, bins: int = 1024, energy_range=(0, 1000)):
-        return backend.plot_spectra(energies, bins, energy_range)
-
+            if val >= 100:
+                self.batch_prog.setValue(100)
 
     def main(self):
-        if self.running == False:
-            self.patience = 1
-            self.running = True
-            E = self.E
-            batch_size = self.batch_size
-            n_photons = self.n_photons
-            self.batch_prog = QProgressBar()
-            self.layout.addWidget(self.batch_prog,7,0)
-            self.layout.setRowStretch(self.layout.rowCount(), 1) #This is what resizes the graph when ran again but it stops the left column from restretching
-            detectors = backend.get_detectors()
-            detected_counts, energies, total = self.simulate(n_photons, batch_size, E, detectors)
-            for idx, count in enumerate(detected_counts, start=1):
-                print(total[idx-1]/count *100, "% Detector efficiency")
-                print(f"detected {count} photons")
-            fig = self.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
-            self.display_fig(fig)
-            self.running = False
-            if self.patience == 0: #Remove the label if it has been made
-                self.layout.removeWidget(self.patient)
-                self.patient.deleteLater()
-                self.patient = None
-        else:
+        if self.running:
             if self.patience != 0:
                 self.patience = 0
-                self.patient = QLabel("Be Patient" ) #Happens if a user presses "Start" while the program is currently running
-                self.patient.setOpenExternalLinks(True)
-                self.layout.addWidget(self.patient, 8, 0)
-                
-    def closeEvent(self,event):
+                if self.patient is None:
+                    self.patient = QLabel("Be Patient")
+                    self.left_layout.addWidget(self.patient)
+            return
+
+        # my head hurts -K
+        self.running = True
+        self.patience = 1
+        self.batch_prog.setValue(0)
+        self.manager = Manager()
+        self.progress_value = self.manager.Value('i', 0)
+        self.progress_timer.start(100)
+        detectors = backend.get_detectors()
+        self.thread = QThread()
+        self.worker = SimWorker(self.n_photons, self.batch_size, self.E,detectors, self.progress_value)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.simulation_done)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.start()
+
+    def simulation_done(self, detected_counts, energies, total):
+        self.progress_timer.stop()
+        self.batch_prog.setValue(100)
+        for idx, count in enumerate(detected_counts, start=1):
+            print(total[idx - 1] / count * 100, "% Detector efficiency")
+            print(f"detected {count} photons")
+
+        fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
+        self.display_fig(fig)
+        self.running = False
+
+        if self.patient:
+            self.left_layout.removeWidget(self.patient)
+            self.patient.deleteLater()
+            self.patient = None
+
+    def closeEvent(self, event):
         raise SystemExit(0)
