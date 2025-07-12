@@ -11,7 +11,7 @@ import numpy as np
 plt.rcParams['axes.xmargin'] = 0
 
 class MainWindow(QMainWindow):
-    def __init__(self):#
+    def __init__(self):
         #Defaults
         self.E = 662 #keV
         self.batch_size =100_000
@@ -136,11 +136,3 @@ class MainWindow(QMainWindow):
                 
     def closeEvent(self,event):
         raise SystemExit(0)
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.resize(1000,800)
-    window.show()
-    app.exec()
