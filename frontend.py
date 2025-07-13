@@ -2,7 +2,7 @@ import sys
 from multiprocessing import Manager
 from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit
-from PyQt5.QtGui import QIntValidator
+from PyQt5.QtGui import QIntValidator #THE VALIDATORRR
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
 import matplotlib.pyplot as plt
 import backend
@@ -65,26 +65,26 @@ class MainWindow(QMainWindow):
         batches_label = QLabel("Number of photons per batch (Default = 100,000):")
         batches_label.setFixedHeight(30)
 
-        # Energy label
+        #Energy label
         self.E_box = QLabel(f"Energy: {self.E} keV (Default = 662 keV)")
         self.E_box.setFixedHeight(30)
 
-        # Energy slider
+        #Energy slider
         self.energy_slider = QSlider(Qt.Horizontal)
         self.energy_slider.setRange(1, 1000)
         self.energy_slider.setValue(self.E)
         self.energy_slider.setFixedHeight(30)
         self.energy_slider.valueChanged.connect(self.energy_update)
 
-        # Integer input box (initially hidden)
+        #Self-validating integer input box
         self.energy_input = QLineEdit()
-        self.energy_input.setValidator(QIntValidator(1, 1000))
+        self.energy_input.setValidator(QIntValidator(1, 1000)) #so the interesting chungus quirk about this is that if it isnt between 1-1000 it just uses the previous number
         self.energy_input.setFixedHeight(30)
         self.energy_input.setVisible(False)
         self.energy_input.setPlaceholderText("Energy in keV (1–1000)")
         self.energy_input.returnPressed.connect(self.energy_input_update)
 
-        # Checkbox to toggle input method
+        #Checkbox for input toggling
         self.use_text_input = QCheckBox("Use input box instead")
         self.use_text_input.setFixedHeight(30)
         self.use_text_input.stateChanged.connect(self.toggle_energy_input)
@@ -185,6 +185,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         raise SystemExit(0)
 
+    #main is down here now because its faster to get to it if its at either end of the file 
     def main(self):
         if self.use_text_input.isChecked():
             text = self.energy_input.text()
