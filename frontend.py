@@ -1,7 +1,8 @@
 import sys
 from multiprocessing import Manager
 from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit
+from PyQt5.QtGui import QIntValidator #THE VALIDATORRR
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
 import matplotlib.pyplot as plt
 import backend
@@ -64,22 +65,34 @@ class MainWindow(QMainWindow):
         batches_label = QLabel("Number of photons per batch (Default = 100,000):")
         batches_label.setFixedHeight(30)
 
-        #Energy slider
-        self.energy = QSlider(Qt.Horizontal)
-        self.energy.setRange(1, 1000) #changed the lowest value to 1 because 0 crashes the program -K
-        self.energy.setValue(662)
-        self.energy.setFixedHeight(30)
-        self.energy.valueChanged.connect(self.energy_update)
-
         #Energy label
         self.E_box = QLabel(f"Energy: {self.E} keV (Default = 662 keV)")
         self.E_box.setFixedHeight(30)
+
+        #Energy slider
+        self.energy_slider = QSlider(Qt.Horizontal)
+        self.energy_slider.setRange(1, 1000)
+        self.energy_slider.setValue(self.E)
+        self.energy_slider.setFixedHeight(30)
+        self.energy_slider.valueChanged.connect(self.energy_update)
+
+        #Self-validating integer input box
+        self.energy_input = QLineEdit()
+        self.energy_input.setValidator(QIntValidator(1, 1000)) #so the interesting chungus quirk about this is that if it isnt between 1-1000 it just uses the previous number
+        self.energy_input.setFixedHeight(30)
+        self.energy_input.setVisible(False)
+        self.energy_input.setPlaceholderText("Energy in keV (1–1000)")
+        self.energy_input.returnPressed.connect(self.energy_input_update)
+
+        #Checkbox for input toggling
+        self.use_text_input = QCheckBox("Use input box instead")
+        self.use_text_input.setFixedHeight(30)
+        self.use_text_input.stateChanged.connect(self.toggle_energy_input)
 
         #Start button
         start_button = QPushButton("Start")
         start_button.clicked.connect(self.main) #This runs the main that was from the backend
         start_button.setFixedHeight(30)
-
 
         #:broken_heart::wilted_rose:
         self.left_layout.addWidget(photons_label)
@@ -87,7 +100,9 @@ class MainWindow(QMainWindow):
         self.left_layout.addWidget(batches_label)
         self.left_layout.addWidget(batch_select)
         self.left_layout.addWidget(self.E_box)
-        self.left_layout.addWidget(self.energy)
+        self.left_layout.addWidget(self.energy_slider)
+        self.left_layout.addWidget(self.energy_input)
+        self.left_layout.addWidget(self.use_text_input)
         self.left_layout.addWidget(start_button)
         self.batch_prog = QProgressBar()
         self.left_layout.addWidget(self.batch_prog)
@@ -121,6 +136,8 @@ class MainWindow(QMainWindow):
     def energy_update(self, E):
         self.E = E
         self.E_box.setText(f"Energy: {E} keV (Default = 662 keV)")
+        if self.use_text_input.isChecked():
+            self.energy_input.setText(str(E))
 
     def poll_progress(self):
         if self.progress_value:
@@ -129,7 +146,54 @@ class MainWindow(QMainWindow):
             if val >= 100:
                 self.batch_prog.setValue(100)
 
+    def simulation_done(self, detected_counts, energies, total):
+        self.progress_timer.stop()
+        self.batch_prog.setValue(100)
+        for idx, count in enumerate(detected_counts, start=1):
+            print(total[idx - 1] / count * 100, "% Detector efficiency")
+            print(f"detected {count} photons")
+
+        fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
+        self.display_fig(fig)
+        self.running = False
+
+        if self.patient:
+            self.left_layout.removeWidget(self.patient)
+            self.patient.deleteLater()
+            self.patient = None
+
+    def toggle_energy_input(self, state):
+        if state == Qt.Checked:
+            self.energy_slider.setVisible(False)
+            self.energy_input.setVisible(True)
+            self.energy_input.setText(str(self.energy_slider.value()))
+        else:
+            text = self.energy_input.text()
+            if text.isdigit():
+                self.energy_update(int(text))
+            self.energy_input.setVisible(False)
+            self.energy_slider.setVisible(True)
+
+    def energy_input_update(self):
+        text = self.energy_input.text()
+        if text.isdigit():
+            val = int(text)
+            if 1 <= val <= 1000:
+                self.E = val
+                self.E_box.setText(f"Energy: {val} keV (Default = 662 keV)")
+
+    def closeEvent(self, event):
+        raise SystemExit(0)
+
+    #main is down here now because its faster to get to it if its at either end of the file 
     def main(self):
+        if self.use_text_input.isChecked():
+            text = self.energy_input.text()
+            if text.isdigit():
+                val = int(text)
+                if 1 <= val <= 1000:
+                    self.energy_update(val)
+
         if self.running:
             if self.patience != 0:
                 self.patience = 0
@@ -155,22 +219,3 @@ class MainWindow(QMainWindow):
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
         self.thread.start()
-
-    def simulation_done(self, detected_counts, energies, total):
-        self.progress_timer.stop()
-        self.batch_prog.setValue(100)
-        for idx, count in enumerate(detected_counts, start=1):
-            print(total[idx - 1] / count * 100, "% Detector efficiency")
-            print(f"detected {count} photons")
-
-        fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
-        self.display_fig(fig)
-        self.running = False
-
-        if self.patient:
-            self.left_layout.removeWidget(self.patient)
-            self.patient.deleteLater()
-            self.patient = None
-
-    def closeEvent(self, event):
-        raise SystemExit(0)
