@@ -32,11 +32,10 @@ class Si(IDetector):
         xc, yc, zc, xf, yf, zf = self._bounds
         bound_min = np.array([xc, yc, zc])
         bound_max = np.array([xf, yf, zf])
-
+        detected = 0
         with np.errstate(divide='ignore', invalid='ignore'):
             t_min = (bound_min - origins) / directions
             t_max = (bound_max - origins) / directions
-
         t_min = np.where(directions == 0, -np.inf, t_min)
         t_max = np.where(directions == 0, np.inf, t_max)
         tclose = np.max(t_min, axis=1)
@@ -54,11 +53,12 @@ class Si(IDetector):
         tclose_det = np.where(tclose <= tfar, tclose, None)
         for i in range(batch_size):
             if tclose[i] <= tfar[i]:
+                detected +=1
                 electron_E = (photon.photoelectric(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano))  
                 electrons.append(round(electron_E)) #rounding to an int here. Realistically, it will just be put into a channel number for spectroscopy but rounding is easiest for now
                 #Silicon detectors are generally more suited to direct detection of charged particles, and not necessarily of photons due to their much smaller detector volume compared to that of scintillators. For now however, for the sake of comparison of energy resolutions, I will keep the photoelectric method here
         
         #print(positions)
-        return tclose <= tfar, electrons, tclose <= tfar #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
+        return detected, electrons, detected #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
             
         

@@ -7,7 +7,7 @@ from multiprocessing import Pool
 
 def get_detectors():
     return [
-        NaITl(100, 100, 0, 60, 60, 60),  # 6x6x6cm NaITl
+        NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120),  #cylinder with a radius of 6cm, height of 12cm, axis facing the origin
         Si(100, 0, 100, 60, 60, 2)       # 6x6x0.2cm Si
     ]
 
@@ -26,7 +26,7 @@ def simulate_batch(batch_size: int, E: float, detectors):
             origins, directions, theta, phi, E, batch_size
         )
         total[idx] += np.sum(total_dtd)
-        detected_counts[idx] += np.sum(mask)
+        detected_counts[idx] += mask #mask is no longer a list of True/False
         energies[idx].extend(batch_energies)# this adds the cumulative data, previously you were only plotting the last batch (unless thats what you wanted to do in which case, sorry)
 
     return detected_counts, energies, total

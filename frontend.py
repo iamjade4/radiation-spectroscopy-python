@@ -1,5 +1,6 @@
 import sys
 from multiprocessing import Manager
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
@@ -137,6 +138,7 @@ class MainWindow(QMainWindow):
                     self.patient = QLabel("Be Patient")
                     self.left_layout.addWidget(self.patient)
             return
+
 
         # my head hurts -K
         self.running = True
