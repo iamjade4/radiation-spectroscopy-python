@@ -5,11 +5,12 @@ from detectors.naitl import NaITl
 from detectors.si import Si
 from multiprocessing import Pool
 
-def get_detectors():
-    return [
-        NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120),  #cylinder with a radius of 6cm, height of 12cm, axis facing the origin
-        Si(100, 0, 100, 60, 60, 2)       # 6x6x0.2cm Si
-    ]
+#def get_detectors():
+    # return [
+    #     NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120),  #cylinder with a radius of 6cm, height of 12cm, axis facing the origin
+    #     Si(100, 0, 100, 60, 60, 2)       # 6x6x0.2cm Si
+    # ]
+    
 
 
 def simulate_batch(batch_size: int, E: float, detectors):

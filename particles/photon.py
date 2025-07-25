@@ -118,10 +118,11 @@ class photon(IParticle):
         px_s = pX_s*cos_theta*cos_phi - pY_s*sin_theta#converting from the cme frame to the origin frame
         py_s = pX_s*sin_theta*cos_phi + pY_s*cos_theta
         pz_s = pX_s*sin_phi
+        mag = np.sqrt(px_s**2 + py_s**2 + pz_s**2)
         
-        px_s = px_s/np.sqrt(px_s**2 + py_s**2 + pz_s**2) #normalising here
-        py_s = py_s/np.sqrt(px_s**2 + py_s**2 + pz_s**2)
-        pz_s = pz_s/np.sqrt(px_s**2 + py_s**2 + pz_s**2)
+        px_s = px_s/mag #normalising here
+        py_s = py_s/mag
+        pz_s = pz_s/mag
         
         px_el = px_i - px_s
         py_el = py_i - py_s

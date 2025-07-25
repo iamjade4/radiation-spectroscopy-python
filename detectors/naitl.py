@@ -55,8 +55,8 @@ class NaITl(IDetector):
         p2_cyl = O + d2*n
         angles = photon.gen_angles(E, batch_size)
         capcheck1 = (np.sum((O + n*dc1 - self.b)*(O + n*dc1 - self.b), axis=1)) <= self.r**2
-        p1_cap = O * dc1*n
-        p2_cap = O * dc2*n
+        p1_cap = O + dc1*n
+        p2_cap = O + dc2*n
         if E > 500:
             photo_csc = photon.photoelectric_csc_high(self.Z_n, E) #photoelectric crosssection for high energies
         else:
@@ -68,8 +68,7 @@ class NaITl(IDetector):
         total = 0
         for i in range(batch_size):
             if (disc[i] >=0 and self.b[0] <= p1_cyl[i,0] <= self.t[0] and self.b[1] <= p1_cyl[i, 1] <= self.t[1] and self.b[2] <= p1_cyl[i,2] <= self.t[2]) or capcheck1[i] == True: #need to sort out  a check for the end caps
-                detected += 1
-                #Going to compute interaction probability based off of photon cross sections
+                detected += 1                #Going to compute interaction probability based off of photon cross sections
                 if capcheck1[i] == False:
                     dist = abs(np.sum(d2[i,0] - d1[i,0])/10) #distance travelled inside of the detector (cm)
                     #These do not take into consideration whether or not the particle enters via the cap and leaves via the surface  & vise versa
@@ -87,9 +86,9 @@ class NaITl(IDetector):
                     total+=1
                     cos_phi = np.cos(phi[i])
                     dist_int = -np.log(1-interaction_threshold)*(lifetime*3*10**10)
-                    x_int = dist_int * np.cos(theta[i]) * cos_phi + p[0]#The point of interaction 
-                    y_int = dist_int * np.sin(theta[i]) * cos_phi + p[1]
-                    z_int = dist_int * np.sin(phi[i]) + p[2] #This makes it kinda slow due to all of the trig
+                    x_int = 10*dist_int * np.cos(theta[i]) * cos_phi + p[0]#The point of interaction 
+                    y_int = 10*dist_int * np.sin(theta[i]) * cos_phi + p[1]
+                    z_int = 10*dist_int * np.sin(phi[i]) + p[2] #This makes it kinda slow due to all of the trig
                     if interaction_type <= threshold: #my photopeak..... so so small
                         electron_E = (photon.photoelectric(theta[i], phi[i], E, x_int, y_int, z_int, dist_int, self.fano))  
                         electrons.append(electron_E)
@@ -111,9 +110,9 @@ class NaITl(IDetector):
                         compton_bool = True
         if compton > 0:
             #print(compton, "photons scattered in this batch") #Debug
-            origins = photon_s_x, photon_s_y, photon_s_z
+            origins = np.array([photon_s_x, photon_s_y, photon_s_z])
             origins = np.transpose(origins)
-            directions = (photon_s_px, photon_s_py, photon_s_pz)
+            directions = np.array([photon_s_px, photon_s_py, photon_s_pz])
             directions = np.transpose(directions)
             
             for i in range(compton):
@@ -136,27 +135,26 @@ class NaITl(IDetector):
                     #bad += electron [9]
                 electrons.append(electron_E)
         return detected, electrons, total
-            
-    def detects_single(self, O, n, theta, phi, E, electron, t, i, angles): #this is just for compton photons        
+    #v This may end up being reduntant as I kind of want to use detects_batch again for all of the scatters within a batch, but I would need to change how getting angles works right now since it currently uses a single energy and not an array of energies. Would also need to make an array of crossections
+    def detects_single(self, O, n, theta, phi, E, electron, t, i, angles): #this is just for compton photons   
         #Doesn't need to go through the detection algorithm, we already know it is in the detector (this will change when penetration into a detector is considered)
             #hi this is changing now
              #changing again for another detection algorithm
                  #the salami lid dont fit
+                 #it works now but keep an eye on this.... I think too many internal scatters are happening
         disc = np.sum((np.cross(n, self.a)* np.cross(n, self.a)))*self.r**2 - (np.sum(((self.b - O)* np.cross(n, self.a)))**2) #discriminant
-        with np.errstate(divide='ignore', invalid='ignore'): #Distances towards cylinder surface intersection points
-            d1 = (np.sum(np.cross(n, self.a)* np.cross((self.b-O), self.a)) - np.sqrt(disc))/(np.sum(np.cross(n, self.a)*np.cross(n, self.a)))
-            d2 = (np.sum(np.cross(n, self.a)* np.cross((self.b-O), self.a)) + np.sqrt(disc))/(np.sum(np.cross(n, self.a)*np.cross(n, self.a)))
-        #should only really be d1 or d2 but they should be the same (disc ==0)
-        #print(disc) #fmscl
-        dc1 = np.sum(self.a*(self.b-O))/np.sum(self.a*n) #distances towards cap intersections
-
-        dc2 = np.sum(self.a*(self.t-O))/np.sum(self.a*n)
-
-        #x = np.where(tclose <= tfar, positions[:,0], None)
-        #y = np.where(tclose <= tfar, positions[:,1], None)
-        #z = np.where(tclose <= tfar, positions[:,2], None)
         
-        #print(dist)
+        with np.errstate(divide='ignore', invalid='ignore'): #Distances towards cylinder surface intersection points
+            d1 = abs((np.sum(np.cross(n, self.a)* np.cross((self.b-O), self.a)) - np.sqrt(disc))/(np.sum(np.cross(n, self.a)*np.cross(n, self.a))))
+            d2 = abs((np.sum(np.cross(n, self.a)* np.cross((self.b-O), self.a)) + np.sqrt(disc))/(np.sum(np.cross(n, self.a)*np.cross(n, self.a))))
+        #should only really be d1 or d2 but they should be the same (disc ==0)
+        #p1_cyl = O + n*d1
+        #p2_cyl = O + n*d2
+        #print(disc) #fmscl
+        dc1 = abs(np.sum(self.a*(self.b-O))/np.sum(self.a*n)) #distances towards cap intersections
+        dc2 = abs(np.sum(self.a*(self.t-O))/np.sum(self.a*n))
+        #p1_cap = O + n*dc1
+        #p2_cap = O + n*dc2
         if E > 500:
             photo_csc = photon.photoelectric_csc_high(self.Z_n, E) #photoelectric crosssection for high energies
         else:
@@ -167,19 +165,34 @@ class NaITl(IDetector):
         threshold = photo_csc/total_csc #eventually this will approach 1 for low energy photons -> guaranteeing that comptonscatters will end with a photoelectri absorption (but also there's the probability of escaping which isn't considered here)
         random = np.random.rand()
         interaction_threshold = np.random.rand()
-        if d1 < dc1 or d1 <dc2:
-            dist = d1/10
-        else:
-            if dc1 < dc2:
-                dist = dc1/10
+        if d1< d2:
+            if d1 < dc1 or d1 <dc2:
+                dist = d1/10
+                #p = p1_cyl
             else:
-                dist = dc2/10
-        if -np.log(1-interaction_threshold)*(lifetime*3*10**10) <= dist:
+                if dc1 < dc2:
+                    dist = dc1/10
+                    #p = p1_cap
+                else:
+                    dist = dc2/10
+                    #p = p2_cap
+        else:
+            if d2 < dc1 or d2 <dc2:
+                dist = d2/10
+                #p = p2_cyl
+            else:
+                if dc1 < dc2:
+                    dist = dc1/10
+                    #p = p1_cap
+                else:
+                    dist = dc2/10
+                    #p = p2_cap
+        if -np.log(1-interaction_threshold)*(lifetime*3*10**10) <= dist:#this is in cm
             dist_int = -np.log(1-interaction_threshold)*(lifetime*3*10**10)
             cos_phi = np.cos(phi)
-            x_int = dist_int * np.cos(theta) * cos_phi + O[0]#The point of interaction 
-            y_int = dist_int * np.sin(theta) * cos_phi +O[1]
-            z_int = dist_int * np.sin(phi) + O[2]
+            x_int = 10*dist_int * np.cos(theta) * cos_phi + O[0]#The point of interaction in mm
+            y_int = 10*dist_int * np.sin(theta) * cos_phi +O[1]
+            z_int = 10*dist_int * np.sin(phi) + O[2]
             if random <= threshold: #my photopeak..... so so small
                 electron_E = (photon.photoelectric(theta, phi, E, x_int, y_int, z_int, t, self.fano))  
                 compton_bool = False

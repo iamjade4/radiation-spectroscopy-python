@@ -5,7 +5,11 @@ from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit
 from PyQt5.QtGui import QIntValidator #THE VALIDATORRR
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
+from detectors.naitl import NaITl
+from detectors.si import Si
+import time
 import matplotlib.pyplot as plt
+import numpy as np
 import backend
 
 plt.rcParams['axes.xmargin'] = 0
@@ -24,9 +28,102 @@ class SimWorker(QObject):
         result = backend.simulate(self.n_photons, self.batch_size, self.E, self.detectors, progress_value=self.progress_value)
         self.finished.emit(*result)
 
+class Detector(QWidget):
+    def __init__(self, parent):
+        super(Detector, self).__init__(parent=None)
+        self.parent = parent
+        self.defaults = ['NaITl', 600, 100, 0, 6, 1, 0, 60, 120]
+        #self.detector = NaITl([600, 100, 0], [self.axis_x, self.axis_y, self.axis_z]/(np.sqrt(self.axis_x**2 + self.axis_y**2 + self.axis_z**2)), self.radius, self.height)
+        self.setWindowTitle("New Detector")
+        self.layout = QVBoxLayout()
+        
+        self.add_label = QLabel("Add a new detector")
+        self.add_label.setFixedHeight(30)
+        
+        self.options = QComboBox()
+        self.options.addItem('')
+        self.options.addItem("NaITl")
+        self.options.addItem("Si")
+        self.options.setFixedHeight(30)
+        self.options.setCurrentIndex(0)
+        
+        self.radius_label = QLabel("Radius (mm): (Default = 60)")
+        self.radius_label.setFixedHeight(30)
+        
+        self.radius_input = QLineEdit(parent=self)
+        self.radius_input.setValidator(QIntValidator(bottom=0))
+        self.radius_input.setFixedHeight(30)
+        
+        self.height_label = QLabel("Height (mm): (Default = 120)")
+        self.height_label.setFixedHeight(30)
+        
+        self.height_input = QLineEdit(parent=self)
+        self.height_input.setValidator(QIntValidator(bottom=0))
+        self.height_input.setFixedHeight(30)
+        
+        self.axis_label = QLabel("Cylindrical axis: (Default = [6, 1, 0]). Input in X, Y, Z order.")
+        self.axis_label.setFixedHeight(30)
+        
+        self.axis_input_x = QLineEdit(parent=self)
+        self.axis_input_x.setValidator(QIntValidator())
+        self.axis_input_x.setFixedHeight(30)
+        self.axis_input_y = QLineEdit(parent=self)
+        self.axis_input_y.setValidator(QIntValidator())
+        self.axis_input_y.setFixedHeight(30)
+        self.axis_input_z = QLineEdit(parent=self)
+        self.axis_input_z.setValidator(QIntValidator())
+        self.axis_input_z.setFixedHeight(30)
+        
+        self.base_label = QLabel("Position of the detector: (Default = [600, 100, 0]. Input in X, Y, Z order.")
+        self.base_label.setFixedHeight(30)
+                                       
+        self.base_input_x = QLineEdit(parent=self)
+        self.base_input_x.setValidator(QIntValidator())
+        self.base_input_x.setFixedHeight(30)
+        self.base_input_y = QLineEdit(parent=self)
+        self.base_input_y.setValidator(QIntValidator())
+        self.base_input_y.setFixedHeight(30)
+        self.base_input_z = QLineEdit(parent=self)
+        self.base_input_z.setValidator(QIntValidator())
+        self.base_input_z.setFixedHeight(30)
+        
+        self.add = QPushButton("Add Detector")
+        self.add.setFixedHeight(30)
+        self.add.clicked.connect(self.add_detector)
+        
+        self.layout.addWidget(self.add_label)
+        self.layout.addWidget(self.options)
+        self.layout.addWidget(self.radius_label)
+        self.layout.addWidget(self.radius_input)
+        self.layout.addWidget(self.height_label)
+        self.layout.addWidget(self.height_input)
+        self.layout.addWidget(self.axis_label)
+        self.layout.addWidget(self.axis_input_x)
+        self.layout.addWidget(self.axis_input_y)
+        self.layout.addWidget(self.axis_input_z)
+        self.layout.addWidget(self.base_label)
+        self.layout.addWidget(self.base_input_x)
+        self.layout.addWidget(self.base_input_y)
+        self.layout.addWidget(self.base_input_z)
+        self.layout.addWidget(self.add)
+        self.parameters = self.defaults
+        self.setLayout(self.layout)
+
+    def add_detector(self):
+        self.inputs = [self.options.currentText(), self.base_input_x.text(), self.base_input_y.text(), self.base_input_z.text(), self.axis_input_x.text(), self.axis_input_y.text(), self.axis_input_z.text(), self.radius_input.text(), self.height_input.text()]
+        for i in range(len(self.inputs)):
+            if self.inputs[i] != '':
+                self.parameters[i] = self.inputs[i]
+            #VV Just putting NaITl manually here for now
+        if self.parameters[0] == 'NaITl':
+            self.detector = NaITl([int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3])], [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), int(self.parameters[7]), int(self.parameters[8]))
+        elif self.parameters[0] == 'Si':
+            self.detector = Si([int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3])], [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), int(self.parameters[7]), int(self.parameters[8]))
+        self.parent.add_detector_func()
+        self.close()
 class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent)
         self.setWindowTitle("Radiation Spectroscopy Sim")
         self.running = False
         self.patience = 1
@@ -38,6 +135,10 @@ class MainWindow(QMainWindow):
         self.E = 662 #keV
         self.batch_size = 100_000
         self.n_photons = 10_000_000
+        self.detectors = [
+            NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120),  #cylinder with a radius of 6cm, height of 12cm, axis facing the origin
+            Si(100, 0, 100, 60, 60, 2)       # 6x6x0.2cm Si
+        ]
 
         self.manager = None
         self.progress_value = None
@@ -89,6 +190,15 @@ class MainWindow(QMainWindow):
         self.use_text_input = QCheckBox("Use input box instead")
         self.use_text_input.setFixedHeight(30)
         self.use_text_input.stateChanged.connect(self.toggle_energy_input)
+        
+        self.add_detector_label = QLabel("""If unused, default detectors are:
+                                         NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120)
+                                         Si(100, 0, 100, 60, 60, 2)""")
+        self.add_detector_label.setFixedHeight(60)
+        
+        self.add_detector = QPushButton("Add detector")
+        self.add_detector.clicked.connect(self.detector)
+        self.add_detector.setFixedHeight(30)
 
         #Start button
         start_button = QPushButton("Start")
@@ -104,6 +214,8 @@ class MainWindow(QMainWindow):
         self.left_layout.addWidget(self.energy_slider)
         self.left_layout.addWidget(self.energy_input)
         self.left_layout.addWidget(self.use_text_input)
+        self.left_layout.addWidget(self.add_detector_label)
+        self.left_layout.addWidget(self.add_detector)
         self.left_layout.addWidget(start_button)
         self.batch_prog = QProgressBar()
         self.left_layout.addWidget(self.batch_prog)
@@ -185,8 +297,17 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         raise SystemExit(0)
+    
+    def detector(self):
+        self.window = Detector(self)
+        self.window.show()
+        
+    def add_detector_func(self):
+        self.detectors = [] #deletes the defaults
+        self.detectors.append(self.window.detector)
 
     #main is down here now because its faster to get to it if its at either end of the file 
+        #oh ok
     def main(self):
         if self.use_text_input.isChecked():
             text = self.energy_input.text()
@@ -211,7 +332,7 @@ class MainWindow(QMainWindow):
         self.manager = Manager()
         self.progress_value = self.manager.Value('i', 0)
         self.progress_timer.start(100)
-        detectors = backend.get_detectors()
+        detectors = self.detectors
         self.thread = QThread()
         self.worker = SimWorker(self.n_photons, self.batch_size, self.E,detectors, self.progress_value)
         self.worker.moveToThread(self.thread)
