@@ -5,25 +5,52 @@ electrons = []
 fano = 0.129 #General value for silico detectors. It does vary with whether or not it is cryogenically cooled though so this is just a general estimate
 
 class Si(IDetector):
-    def __init__(self, x, y, z, X, Y, Z):
+    def __init__(self, height, width, thickness, n, position):
         #Lowercase are the minumum bound position and uppercase are the dimensions
         #So far this only allows for cuboidal detectors, I will have to redefine it for more complex geometry
         #This is a silicon slab detector so a cuboidal geometry actually suits it here
-        self.x = x
-        self.y = y
-        self.z = z
-        self.X = X
-        self.Y = Y
-        self.Z = Z
+        self.h = height
+        self.w = width
+        self.d = thickness/1000
+        self.n = n
+        self.o = position
         self._bounds = self._calculate_bounds()
         self.fano = fano #This allows multiple detector types to be called at once by removing the need for fano to remain a single value, it is now inherent to the detector's instance
 
     def _calculate_bounds(self):
+        #thickness is in x axis by default (theta = 0, phi = 0)
+        self.x = self.o[0]
+        self.y = self.o[1] - self.w/2
+        self.z = self.o[2] - self.h/2
+        self.X = self.o[0] + self.d
+        self.Y = self.o[1] + self.w/2
+        self.Z = self.o[2] + self.h/2
+        if self.n[1] != 0:
+            self.theta  = np.arccos(self.n[0]/self.n[1])
+        else:
+            self.theta = 0
+        self.phi = np.arcsin(self.n[2])
+        sin_theta = np.sin(self.theta)
+        cos_theta = np.cos(self.theta)
+        sin_phi = np.sin(self.phi)
+        cos_phi = np.cos(self.phi)
+        Rz = np.array([cos_theta, -sin_theta, 0,
+                      sin_theta, cos_theta, 0,
+                      0, 0, 1])
+        Rz = np.reshape(Rz, (3,3))
+        Ry = np.array([cos_phi, 0, -sin_phi,
+                       0, 1, 0,
+                       sin_phi, 0, cos_phi])
+        Ry = np.reshape(Ry, (3,3))
+        self.x, self.y, self.z = np.dot(Rz,np.dot(Ry,[self.x, self.y, self.z]))
+        self.X, self.Y, self.Z = np.dot(Rz,np.dot(Ry,[self.X, self.Y, self.Z]))
+        
+        
         return (
             self.x, self.y, self.z,
-            self.x + self.X,
-            self.y + self.Y,
-            self.z + self.Z
+            self.X,
+            self.Y,
+            self.Z
         )
 
         
