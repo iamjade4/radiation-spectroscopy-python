@@ -61,7 +61,7 @@ class NaITl(IDetector):
             photo_csc = photon.photoelectric_csc_high(self.Z_n, E) #photoelectric crosssection for high energies
         else:
             photo_csc = photon.photoelectric_csc_mid(self.Z_n, E)
-        compton_csc = photon.comptonscatter_csc(E)
+        compton_csc = photon.comptonscatter_csc(E, self.Z_n)
         total_csc = compton_csc + photo_csc
         threshold = photo_csc/total_csc
         #print(compton_csc, photo_csc)#FIXED THIS!! compton_csc was in mB so it was 1000x bigger than it's supposed to be!
@@ -162,7 +162,7 @@ class NaITl(IDetector):
             photo_csc = photon.photoelectric_csc_high(self.Z_n, E) #photoelectric crosssection for high energies
         else:
             photo_csc = photon.photoelectric_csc_mid(self.Z_n, E)
-        compton_csc = photon.comptonscatter_csc(E)
+        compton_csc = photon.comptonscatter_csc(E, self.Z_n)
         total_csc = compton_csc + photo_csc
         lifetime = 1/(self.n*total_csc*10**-14*3)
         threshold = photo_csc/total_csc #eventually this will approach 1 for low energy photons -> guaranteeing that comptonscatters will end with a photoelectri absorption (but also there's the probability of escaping which isn't considered here)

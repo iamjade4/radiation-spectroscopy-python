@@ -53,11 +53,11 @@ class photon(IParticle):
 
     def get_direction(self):
         return (self._dx, self._dy, self._dz)
-    def comptonscatter_csc(Ei):
+    def comptonscatter_csc(Ei, Z):
         epsilon = Ei/m_e
         r_es = 0.074 #B
         #FIXED THIS
-        return 2*np.pi*(r_es)*((1+epsilon)/epsilon**3 * ((2*epsilon*(1 + epsilon))/(1+2*epsilon)-math.log(1+2*epsilon))+math.log(1+2*epsilon)/2*epsilon -(1+3*epsilon)/((1+2*epsilon)**2))
+        return Z*2*np.pi*(r_es)*((1+epsilon)/epsilon**2 * ((2*(1 + epsilon))/(1+2*epsilon) - math.log(1+2*epsilon)/epsilon)+math.log(1+2*epsilon)/2*epsilon -(1+3*epsilon)/((1+2*epsilon)**2))
     def gen_angles(energy, batch_size):
         theta_s = np.linspace(0, np.pi, batch_size)
         angle_energies = np.linspace(energy, energy, num = batch_size)
