@@ -19,12 +19,12 @@ class Si(IDetector):
 
     def _calculate_bounds(self):
         #thickness is in x axis by default (theta = 0, phi = 0)
-        self.x = self.o[0]
-        self.y = self.o[1] - self.w/2
-        self.z = self.o[2] - self.h/2
-        self.X = self.o[0] + self.d
-        self.Y = self.o[1] + self.w/2
-        self.Z = self.o[2] + self.h/2
+        self.x = 0
+        self.y = -self.w/2
+        self.z = -self.h/2
+        self.X = self.d
+        self.Y = self.w/2
+        self.Z = self.h/2 #Local points, relative to detector origin for rotational purposes
         if self.n[1] != 0:
             self.theta  = np.arccos(self.n[0]/self.n[1])
         else:
@@ -43,14 +43,14 @@ class Si(IDetector):
                        sin_phi, 0, cos_phi])
         Ry = np.reshape(Ry, (3,3))
         self.x, self.y, self.z = np.dot(Rz,np.dot(Ry,[self.x, self.y, self.z]))
-        self.X, self.Y, self.Z = np.dot(Rz,np.dot(Ry,[self.X, self.Y, self.Z]))
+        self.X, self.Y, self.Z = np.dot(Rz,np.dot(Ry,[self.X, self.Y, self.Z])) #these are all wrt the base of the detector
         
         
         return (
-            self.x, self.y, self.z,
-            self.X,
-            self.Y,
-            self.Z
+            self.x + self.o[0], self.y + self.o[1], self.z + self.o[2], #self.o added here to convert them to the global cartesian grid
+            self.X + self.o[0],
+            self.Y + self.o[1],
+            self.Z + self.o[2]
         )
 
         

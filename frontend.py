@@ -2,7 +2,7 @@ import sys
 from multiprocessing import Manager
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit, QListWidgetItem, QListWidget
 from PyQt5.QtGui import QIntValidator #THE VALIDATORRR
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
 from detectors.naitl import NaITl
@@ -59,40 +59,40 @@ class Detector(QWidget): #Window to add new detectors
         self.radius_label = QLabel("Radius (mm): (Default = 60)")
         self.radius_label.setFixedHeight(30)
         
-        self.radius_input = QLineEdit(parent=self)
+        self.radius_input = QLineEdit("60", parent=self)
         self.radius_input.setValidator(QIntValidator(bottom=1))
         self.radius_input.setFixedHeight(30)
         
         self.cyl_height_label = QLabel("Height (mm): (Default = 120)")
         self.cyl_height_label.setFixedHeight(30)
         
-        self.cyl_height_input = QLineEdit(parent=self)
+        self.cyl_height_input = QLineEdit("120", parent=self)
         self.cyl_height_input.setValidator(QIntValidator(bottom=1))
         self.cyl_height_input.setFixedHeight(30)
         
         self.axis_label = QLabel("Cylindrical axis: (Default = [6, 1, 0]). Input in X, Y, Z order.")
         self.axis_label.setFixedHeight(30)
         
-        self.axis_input_x = QLineEdit(parent=self)
+        self.axis_input_x = QLineEdit("6", parent=self)
         self.axis_input_x.setValidator(QIntValidator())
         self.axis_input_x.setFixedHeight(30)
-        self.axis_input_y = QLineEdit(parent=self)
+        self.axis_input_y = QLineEdit("1", parent=self)
         self.axis_input_y.setValidator(QIntValidator())
         self.axis_input_y.setFixedHeight(30)
-        self.axis_input_z = QLineEdit(parent=self)
+        self.axis_input_z = QLineEdit("0", parent=self)
         self.axis_input_z.setValidator(QIntValidator())
         self.axis_input_z.setFixedHeight(30)
         
         self.base_label = QLabel("Position of the detector: (Default = [600, 100, 0]. Input in X, Y, Z order.")
         self.base_label.setFixedHeight(30)
                                        
-        self.base_input_x = QLineEdit(parent=self)
+        self.base_input_x = QLineEdit("600", parent=self)
         self.base_input_x.setValidator(QIntValidator())
         self.base_input_x.setFixedHeight(30)
-        self.base_input_y = QLineEdit(parent=self)
+        self.base_input_y = QLineEdit("100", parent=self)
         self.base_input_y.setValidator(QIntValidator())
         self.base_input_y.setFixedHeight(30)
-        self.base_input_z = QLineEdit(parent=self)
+        self.base_input_z = QLineEdit("0", parent=self)
         self.base_input_z.setValidator(QIntValidator())
         self.base_input_z.setFixedHeight(30)
 
@@ -100,47 +100,47 @@ class Detector(QWidget): #Window to add new detectors
         self.sq_height_label = QLabel("Height (mm): (Default = 120)")
         self.sq_height_label.setFixedHeight(30)
         
-        self.sq_height_input = QLineEdit(parent=self)
+        self.sq_height_input = QLineEdit("120", parent=self)
         self.sq_height_input.setValidator(QIntValidator(bottom=1))
         self.sq_height_input.setFixedHeight(30)
         
         self.width_label = QLabel("Width (mm): (Default = 120)")
         self.width_label.setFixedHeight(30)
         
-        self.width_input = QLineEdit(parent=self)
+        self.width_input = QLineEdit("120", parent=self)
         self.width_input.setValidator(QIntValidator(bottom=1))
         self.width_input.setFixedHeight(30)
         
         self.depth_label = QLabel("Thickness (um): (Default = 1000)")
         self.depth_label.setFixedHeight(30)
         
-        self.depth_input = QLineEdit(parent=self)
+        self.depth_input = QLineEdit("1000", parent=self)
         self.depth_input.setValidator(QIntValidator(bottom=1))
         self.depth_input.setFixedHeight(30)
         
         self.normal_label = QLabel("Direction the detector is facing: (Default = [1, 0, 0]). Input in X, Y, Z order.")
         self.normal_label.setFixedHeight(30)
         
-        self.normal_input_x = QLineEdit(parent=self)
+        self.normal_input_x = QLineEdit("1", parent=self)
         self.normal_input_x.setValidator(QIntValidator())
         self.normal_input_x.setFixedHeight(30)
-        self.normal_input_y = QLineEdit(parent=self)
+        self.normal_input_y = QLineEdit("0", parent=self)
         self.normal_input_y.setValidator(QIntValidator())
         self.normal_input_y.setFixedHeight(30)
-        self.normal_input_z = QLineEdit(parent=self)
+        self.normal_input_z = QLineEdit("0", parent=self)
         self.normal_input_z.setValidator(QIntValidator())
         self.normal_input_z.setFixedHeight(30)
         
         self.pos_label = QLabel("Position of the centre front of the detector (Default = [600, 0, 0]). Input in X, Y, Z order.")
         self.pos_label.setFixedHeight(30)
         
-        self.pos_input_x = QLineEdit(parent=self)
+        self.pos_input_x = QLineEdit("600", parent=self)
         self.pos_input_x.setValidator(QIntValidator())
         self.pos_input_x.setFixedHeight(30)
-        self.pos_input_y = QLineEdit(parent=self)
+        self.pos_input_y = QLineEdit("0", parent=self)
         self.pos_input_y.setValidator(QIntValidator())
         self.pos_input_y.setFixedHeight(30)
-        self.pos_input_z = QLineEdit(parent=self)
+        self.pos_input_z = QLineEdit("0", parent=self)
         self.pos_input_z.setValidator(QIntValidator())
         self.pos_input_z.setFixedHeight(30)
         
@@ -164,6 +164,7 @@ class Detector(QWidget): #Window to add new detectors
         self.cyl_layout.addWidget(self.base_input_x)
         self.cyl_layout.addWidget(self.base_input_y)
         self.cyl_layout.addWidget(self.base_input_z)
+        self.cyl_layout.addStretch()
         
         self.square_layout.addWidget(self.sq_height_label)
         self.square_layout.addWidget(self.sq_height_input)
@@ -179,6 +180,7 @@ class Detector(QWidget): #Window to add new detectors
         self.square_layout.addWidget(self.pos_input_x)
         self.square_layout.addWidget(self.pos_input_y)
         self.square_layout.addWidget(self.pos_input_z)
+        self.square_layout.addStretch()
         
         self.layout.addWidget(self.cyl_widget)
         self.cyl_widget.setVisible(0)
@@ -289,7 +291,7 @@ class MainWindow(QMainWindow):
         
         self.add_detector_label = QLabel("""If no detectors are added, default detectors are:
                                          NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120)
-                                         Si(100, 0, 100, 60, 60, 2)""")
+                                         Si(120, 120, 1000, [1, 0, 0], [600, 0, 000])""")
         self.add_detector_label.setFixedHeight(60)
         
         self.add_detector = QPushButton("Add detector")
@@ -299,7 +301,13 @@ class MainWindow(QMainWindow):
         self.detector_lim = QLabel("You have reached the detector limit of 4.")
         self.detector_lim.setFixedHeight(30)
         self.detector_lim.hide()
-
+        
+        self.det_list = QListWidget()
+        self.det_list.hide()
+        self.det_list_label = QLabel("Current Detectors:")
+        self.det_list_label.setFixedHeight(30)
+        self.det_list_label.hide()
+        
         #Start button
         start_button = QPushButton("Start")
         start_button.clicked.connect(self.main) #This runs the main that was from the backend
@@ -319,6 +327,8 @@ class MainWindow(QMainWindow):
         self.left_layout.addWidget(start_button)
         self.batch_prog = QProgressBar()
         self.left_layout.addWidget(self.batch_prog)
+        self.left_layout.addWidget(self.det_list_label)
+        self.left_layout.addWidget(self.det_list)
         self.left_layout.addStretch()
         #right widget placeholder for matplotlib
         self.right_widget = QWidget()
@@ -364,7 +374,7 @@ class MainWindow(QMainWindow):
         self.batch_prog.setValue(100)
         for idx, count in enumerate(detected_counts, start=1):
             print(total[idx - 1] / count * 100, "% Detector efficiency")
-            print(f"detected {count} photons")
+            print(f"detected {total[idx-1]} photons")
 
         fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
         self.display_fig(fig)
@@ -409,8 +419,11 @@ class MainWindow(QMainWindow):
         self.detect_num += 1
         if self.detect_num == 1:
             self.detectors = [] #deletes the defaults only if it's the first time the function is called
+            self.det_list_label.show()
+            self.det_list.show()
         self.detectors.append(self.window.detector)
-
+        self.det_list.addItem(str(self.window.inputs))
+        
     #main is down here now because its faster to get to it if its at either end of the file 
         #oh ok
     def main(self):

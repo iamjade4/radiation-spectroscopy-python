@@ -55,9 +55,9 @@ class photon(IParticle):
         return (self._dx, self._dy, self._dz)
     def comptonscatter_csc(Ei):
         epsilon = Ei/m_e
-        r_e = math.sqrt(79.4) #mB
-        #not sure how to go about this since I need the klein nishina formula but I dont want to integrate over all angles to generate a probability distribution. I just want the interaction probability.
-        return 2*np.pi*(r_e**2)*((1+epsilon)/epsilon**3 * ((2*epsilon*(1 + epsilon))/(1+2*epsilon)-math.log(1+2*epsilon))+math.log(1+2*epsilon)/2*epsilon -(1+3*epsilon)/((1+2*epsilon)**2))
+        r_es = 0.074 #B
+        #FIXED THIS
+        return 2*np.pi*(r_es)*((1+epsilon)/epsilon**3 * ((2*epsilon*(1 + epsilon))/(1+2*epsilon)-math.log(1+2*epsilon))+math.log(1+2*epsilon)/2*epsilon -(1+3*epsilon)/((1+2*epsilon)**2))
     def gen_angles(energy, batch_size):
         theta_s = np.linspace(0, np.pi, batch_size)
         angle_energies = np.linspace(energy, energy, num = batch_size)

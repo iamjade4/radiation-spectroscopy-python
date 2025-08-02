@@ -64,17 +64,17 @@ class NaITl(IDetector):
         compton_csc = photon.comptonscatter_csc(E)
         total_csc = compton_csc + photo_csc
         threshold = photo_csc/total_csc
-        #print(compton_csc, photo_csc) the photoelectric crosssection seems sooooo small for high energies but i guess that makes sense
+        #print(compton_csc, photo_csc)#FIXED THIS!! compton_csc was in mB so it was 1000x bigger than it's supposed to be!
         total = 0
         for i in range(batch_size):
             if (disc[i] >=0 and self.b[0] <= p1_cyl[i,0] <= self.t[0] and self.b[1] <= p1_cyl[i, 1] <= self.t[1] and self.b[2] <= p1_cyl[i,2] <= self.t[2]) or capcheck1[i] == True: #need to sort out  a check for the end caps
                 detected += 1                #Going to compute interaction probability based off of photon cross sections
                 if capcheck1[i] == False:
-                    dist = abs(np.sum(d2[i,0] - d1[i,0])/10) #distance travelled inside of the detector (cm)
+                    dist = abs(np.sum(d2[i,0] - d1[i,0])) #distance travelled inside of the detector (cm)
                     #These do not take into consideration whether or not the particle enters via the cap and leaves via the surface  & vise versa
                     p = p1_cyl[i]
                 else:
-                    dist = abs(np.sum(dc2[i, 0]-dc1[i, 0])/10) #Only want one component of them (theyre tiled for easier vector maths from earlier)
+                    dist = abs(np.sum(dc2[i, 0]-dc1[i, 0])) #Only want one component of them (theyre tiled for easier vector maths from earlier)
                     p = p1_cap[i]
                 lifetime = 1/(self.n*total_csc*10**-14*3) #10^-14 since 1 barn  = 10^-24 cm^2, and c = 3*10^10 cm/s 
                 #probability = 1 - np.e**(-dist/(lifetime*3*10**10))  #Need to check this since it seems very high?
@@ -82,10 +82,13 @@ class NaITl(IDetector):
                 interaction_type = np.random.rand() 
                 #print(probability)
                 #print(dist)
-                if -np.log(1-interaction_threshold)*(lifetime*3*10**10) <= dist: #this will find the distance the photon travels before interacting
+                if -np.log(1-interaction_threshold)*(lifetime*3*10**10)*10 <= dist: #this will find the distance the photon travels before interacting
+                    #^needs fixing
+                    #gonna have to redo this/check it? It's like a factor of 10 too small? Or at least 10 times smaller than previously? but dist is correct, so maybe it was just wrong before
                     total+=1
                     cos_phi = np.cos(phi[i])
                     dist_int = -np.log(1-interaction_threshold)*(lifetime*3*10**10)
+                    #print(dist_int,"cm") This seems correct now
                     x_int = 10*dist_int * np.cos(theta[i]) * cos_phi + p[0]#The point of interaction 
                     y_int = 10*dist_int * np.sin(theta[i]) * cos_phi + p[1]
                     z_int = 10*dist_int * np.sin(phi[i]) + p[2] #This makes it kinda slow due to all of the trig
@@ -167,27 +170,28 @@ class NaITl(IDetector):
         interaction_threshold = np.random.rand()
         if d1< d2:
             if d1 < dc1 or d1 <dc2:
-                dist = d1/10
+                dist = d1
                 #p = p1_cyl
             else:
                 if dc1 < dc2:
-                    dist = dc1/10
+                    dist = dc1
                     #p = p1_cap
                 else:
-                    dist = dc2/10
+                    dist = dc2
                     #p = p2_cap
         else:
             if d2 < dc1 or d2 <dc2:
-                dist = d2/10
+                dist = d2
                 #p = p2_cyl
             else:
                 if dc1 < dc2:
-                    dist = dc1/10
+                    dist = dc1
                     #p = p1_cap
                 else:
-                    dist = dc2/10
+                    dist = dc2
                     #p = p2_cap
-        if -np.log(1-interaction_threshold)*(lifetime*3*10**10) <= dist:#this is in cm
+        if -np.log(1-interaction_threshold)*(lifetime*3*10**10)*10 <= dist:#this is in mm (the distance is in cm*10)
+            #^This is rly small all of the time (same for the batch detects one)
             dist_int = -np.log(1-interaction_threshold)*(lifetime*3*10**10)
             cos_phi = np.cos(phi)
             x_int = 10*dist_int * np.cos(theta) * cos_phi + O[0]#The point of interaction in mm
