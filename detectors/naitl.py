@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from interfaces import IDetector, IParticle
 from particles.photon import photon
 import math
@@ -19,36 +20,43 @@ class NaITl(IDetector):
     def detects_batch(self, O, n, theta, phi, E, batch_size):
         compton_bool = False
         compton = 0 #number of compton scattered photons. It will be used to recursively call detects_batch for multiple scatters.
-        photon_s_px = []
-        photon_s_py = []
-        photon_s_pz = []
-        photon_s_E = []
-        photon_s_theta = []
-        photon_s_phi = []
-        photon_s_x = []
-        photon_s_y = []
-        photon_s_z = []
-        electrons = []
-        compton_E = []
+       
+        #Create a dataframe (2D array) of the values that will be obtained from the calculations for compton scatters
+        df = pd.DataFrame(np.zeros((batch_size, 10)), columns=["compton_E", 
+                                                               "photon_s_px", 
+                                                               "photon_s_py", 
+                                                               "photon_s_pz", 
+                                                               "photon_s_E", 
+                                                               "photon_s_theta", 
+                                                               "photon_s_phi", 
+                                                               "photon_s_x", 
+                                                               "photon_s_y", 
+                                                               "photon_s_z"])
+        #Create a separate array for photoelectric electrons as it will have a different length
+        photo_electrons = np.zeros(batch_size)
+        
+        photo_mask = np.zeros(batch_size).astype(bool)
+        compton_mask = np.zeros(batch_size).astype(bool)
+        
         detected = 0
         #horrible array setups
         #print(n, self.a)
         a = np.tile(self.a, batch_size,)
-        a = np.reshape(a, shape=(batch_size, 3)) #reshaping the axis for vector maths (from shape (3,) to shape (batch_size,3))
+        a = np.reshape(a, (batch_size, 3)) #reshaping the axis for vector maths (from shape (3,) to shape (batch_size,3))
         disc = np.sum((np.cross(n, a)* np.cross(n, a)), axis=1)*self.r**2 - (np.sum(((self.b - O)* np.cross(n, a)), axis=1)**2) #discriminant
         with np.errstate(divide='ignore', invalid='ignore'): #Distances towards cylinder surface intersection points
             d1 = (np.sum(np.cross(n, a)* np.cross((self.b-O), a), axis=1) - np.sqrt(disc))/(np.sum(np.cross(n, a)*np.cross(n, a), axis=1))
             d2 = (np.sum(np.cross(n, a)* np.cross((self.b-O), a), axis=1) + np.sqrt(disc))/(np.sum(np.cross(n, a)*np.cross(n, a), axis=1))
-            d1 = np.reshape(d1, shape=(batch_size,1))
+            d1 = np.reshape(d1, (batch_size,1))
             d1 = np.tile(d1, 3) #reshaping the distances ready for vector maths
-            d2 = np.reshape(d2, shape=(batch_size, 1))
+            d2 = np.reshape(d2, (batch_size, 1))
             d2 = np.tile(d2, 3)
         
         dc1 = np.sum(a*(self.b-O), axis = 1)/np.sum(a*n, axis = 1) #distances towards cap intersections
-        dc1 = np.reshape(dc1, shape=(batch_size,1))
+        dc1 = np.reshape(dc1, (batch_size,1))
         dc1 = np.tile(dc1, 3)
         dc2 = np.sum(a*(self.t-O), axis = 1)/np.sum(a*n, axis = 1)
-        dc2 = np.reshape(dc2, shape=(batch_size,1))
+        dc2 = np.reshape(dc2, (batch_size,1))
         dc2 = np.tile(dc2, 3) 
         #batch_detected = np.sum(disc>=0) #flawed
         p1_cyl = O + d1*n #intersection with cylinder surface
@@ -93,51 +101,55 @@ class NaITl(IDetector):
                     y_int = 10*dist_int * np.sin(theta[i]) * cos_phi + p[1]
                     z_int = 10*dist_int * np.sin(phi[i]) + p[2] #This makes it kinda slow due to all of the trig
                     if interaction_type <= threshold: #my photopeak..... so so small
-                        electron_E = (photon.photoelectric(theta[i], phi[i], E, x_int, y_int, z_int, dist_int, self.fano))  
-                        electrons.append(electron_E)
+                        electron_E = (photon.photoelectric(theta[i], phi[i], E, x_int, y_int, z_int, dist_int, self.fano))
+                        photo_electrons[i] = electron_E
+                        photo_mask[i] = True
                         compton_bool = False
                     else:
+
+                        #Get values from the comptonscatter function for the given photon
                         electron_energy, photon_px, photon_py, photon_pz, photon_energy, photon_theta, photon_phi = (photon.comptonscatter(theta[i], phi[i], E, x_int, y_int, z_int, dist_int, self.fano, angles))
-                        compton_E.append(electron_energy)
+
+                        #Insert them into the dataframe
+                        df.loc[i] = electron_energy, photon_px, photon_py, photon_pz, photon_energy, photon_theta, photon_phi, x_int, y_int, z_int
+                        compton_mask[i] = True
+
                         compton += 1
-                        photon_s_px.append(photon_px)
-                        photon_s_py.append(photon_py)
-                        photon_s_pz.append(photon_pz)
-                        photon_s_E.append(photon_energy)
-                        photon_s_theta.append(photon_theta)
-                        photon_s_phi.append(photon_phi)
-                        photon_s_x.append(x_int)
-                        photon_s_y.append(y_int)
-                        photon_s_z.append(z_int) #this sucks
                         #the scattered photon from compton scattering
                         compton_bool = True
+
+        #Apply masks to extract cases where interactions have occurred
+        compton_df = df[compton_mask]
+        photo_electrons = photo_electrons[photo_mask]
+
+        compton_electrons = np.zeros(compton)
+
         if compton > 0:
             #print(compton, "photons scattered in this batch") #Debug
-            origins = np.array([photon_s_x, photon_s_y, photon_s_z])
-            origins = np.transpose(origins)
-            directions = np.array([photon_s_px, photon_s_py, photon_s_pz])
-            directions = np.transpose(directions)
-            
+            origins = compton_df[["photon_s_x", "photon_s_y", "photon_s_z"]].to_numpy()
+            directions = compton_df[["photon_s_px", "photon_s_py", "photon_s_pz"]].to_numpy()
+
             for i in range(compton):
                 compton_bool = True
-                electron_E = compton_E[i]
+                electron_E = compton_df["compton_E"].iloc[i]
                 j=0
                 while compton_bool == True:
                     #print(electron_E, photon_s_E[i], j)
                     j +=1
-                    electron = (self.detects_single(origins[i], directions[i], photon_s_theta[i], photon_s_phi[i], photon_s_E[i], electrons, d1[i], i, angles)) #recursively calling the method for each scattered photon. HORRIBLY inefficient but since the energies are different, each photon needs to be called inidividually
+                    electron = (self.detects_single(origins[i], directions[i], compton_df["photon_s_theta"].iloc[i], compton_df["photon_s_phi"].iloc[i], compton_df["photon_s_E"].iloc[i], photo_electrons, d1[i], i, angles)) #recursively calling the method for each scattered photon. HORRIBLY inefficient but since the energies are different, each photon needs to be called inidividually
                     electron_E += electron[0]
                     compton_bool = electron[1]
                     if compton_bool == False:
                         break
                     directions[i] = (electron[2], electron[3], electron[4])/np.sqrt(electron[2]**2  + electron[3]**2 + electron[4]**2) #nomalise momence
-                    photon_s_E[i]= electron[5]
-                    photon_s_theta[i] = electron[6]
-                    photon_s_phi[i] = electron[7]
+                    compton_df["photon_s_E"].iloc[i]= electron[5]
+                    compton_df["photon_s_theta"].iloc[i] = electron[6]
+                    compton_df["photon_s_phi"].iloc[i] = electron[7]
                     #totals += electron[8]
                     #bad += electron [9]
-                electrons.append(electron_E)
-        return detected, electrons, total
+                compton_electrons[i] = electron_E
+        return detected, np.concatenate((photo_electrons, compton_electrons)), total
+
     #v This may end up being reduntant as I kind of want to use detects_batch again for all of the scatters within a batch, but I would need to change how getting angles works right now since it currently uses a single energy and not an array of energies. Would also need to make an array of crossections
     def detects_single(self, O, n, theta, phi, E, electron, t, i, angles): #this is just for compton photons   
         #Doesn't need to go through the detection algorithm, we already know it is in the detector (this will change when penetration into a detector is considered)
