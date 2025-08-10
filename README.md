@@ -19,6 +19,7 @@ Download the following python dependencies (either through pip or a package mana
 - Numpy
 - Scipy
 - PyQT5 (PyQT5 is used over 6 due to matplotlib compatibility)
+- pandas
 
 Currently we do not do releases, either download this repository as a .zip or `git clone https://github.com/iamjade4/radiation-spectroscopy-python.git` into your folder of choice. 
 

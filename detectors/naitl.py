@@ -119,32 +119,34 @@ class NaITl(IDetector):
                         compton_bool = True
 
         #Apply masks to extract cases where interactions have occurred
-        compton_df = df[compton_mask]
+        compton_indices = np.where(compton_mask)[0] # compton_df = df[compton_mask] 
         photo_electrons = photo_electrons[photo_mask]
 
         compton_electrons = np.zeros(compton)
 
         if compton > 0:
             #print(compton, "photons scattered in this batch") #Debug
-            origins = compton_df[["photon_s_x", "photon_s_y", "photon_s_z"]].to_numpy()
-            directions = compton_df[["photon_s_px", "photon_s_py", "photon_s_pz"]].to_numpy()
+            origins = df.loc[compton_indices, ["photon_s_x", "photon_s_y", "photon_s_z"]].to_numpy() # origins = compton_df[["photon_s_x", "photon_s_y", "photon_s_z"]].to_numpy()
+            directions = df.loc[compton_indices, ["photon_s_px", "photon_s_py", "photon_s_pz"]].to_numpy() # directions = compton_df[["photon_s_px", "photon_s_py", "photon_s_pz"]].to_numpy()
 
             for i in range(compton):
                 compton_bool = True
-                electron_E = compton_df["compton_E"].iloc[i]
+                electron_E = df.loc[compton_indices[i], "compton_E"] # electron_E = compton_df["compton_E"].iloc[i]
                 j=0
                 while compton_bool == True:
                     #print(electron_E, photon_s_E[i], j)
                     j +=1
-                    electron = (self.detects_single(origins[i], directions[i], compton_df["photon_s_theta"].iloc[i], compton_df["photon_s_phi"].iloc[i], compton_df["photon_s_E"].iloc[i], photo_electrons, d1[i], i, angles)) #recursively calling the method for each scattered photon. HORRIBLY inefficient but since the energies are different, each photon needs to be called inidividually
+                    electron = (self.detects_single(origins[i], directions[i], df.loc[compton_indices[i], "photon_s_theta"], df.loc[compton_indices[i], "photon_s_phi"], df.loc[compton_indices[i], "photon_s_E"], photo_electrons, d1[i], i, angles)) # electron = (self.detects_single(origins[i], directions[i], #recursively calling the method for each scattered photon. HORRIBLY inefficient but since the energies are different, each photon needs to be called inidividually
                     electron_E += electron[0]
                     compton_bool = electron[1]
                     if compton_bool == False:
                         break
                     directions[i] = (electron[2], electron[3], electron[4])/np.sqrt(electron[2]**2  + electron[3]**2 + electron[4]**2) #nomalise momence
-                    compton_df["photon_s_E"].iloc[i]= electron[5]
-                    compton_df["photon_s_theta"].iloc[i] = electron[6]
-                    compton_df["photon_s_phi"].iloc[i] = electron[7]
+
+                    df.loc[compton_indices[i], "photon_s_E"] = electron[5]      # compton_df["photon_s_E"].iloc[i] = electron[5]
+                    df.loc[compton_indices[i], "photon_s_theta"] = electron[6]  # compton_df["photon_s_theta"].iloc[i] = electron[6]
+                    df.loc[compton_indices[i], "photon_s_phi"] = electron[7]    # compton_df["photon_s_phi"].iloc[i] = electron[7]
+
                     #totals += electron[8]
                     #bad += electron [9]
                 compton_electrons[i] = electron_E
