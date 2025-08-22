@@ -13,7 +13,7 @@ class NaITl(IDetector):
         self.h = height
         self.t = self.b + self.a*self.h #top
         self.fano = fano #This allows multiple detector types to be called at once by removing the need for fano to remain a single value, it is now inherent to the detector's instance
-        self.Z_n = 53 #atomic number of iodine
+        self.Z_n = 53*0.846627 + 11*0.153373 #fractional atomic numbers
         self.n = 1.474*10**22 #number density
 
         
@@ -90,12 +90,13 @@ class NaITl(IDetector):
                 interaction_type = np.random.rand() 
                 #print(probability)
                 #print(dist)
-                if -np.log(1-interaction_threshold)*(lifetime*3*10**10)*10 <= dist: #this will find the distance the photon travels before interacting
+                if -np.log(interaction_threshold)*(lifetime*3*10**10)*10 <= dist: #this will find the distance the photon travels before interacting
                     #^needs fixing
+                        #fixed?
                     #gonna have to redo this/check it? It's like a factor of 10 too small? Or at least 10 times smaller than previously? but dist is correct, so maybe it was just wrong before
                     total+=1
                     cos_phi = np.cos(phi[i])
-                    dist_int = -np.log(1-interaction_threshold)*(lifetime*3*10**10)
+                    dist_int = -np.log(interaction_threshold)*(lifetime*3*10**10)
                     #print(dist_int,"cm") This seems correct now
                     x_int = 10*dist_int * np.cos(theta[i]) * cos_phi + p[0]#The point of interaction 
                     y_int = 10*dist_int * np.sin(theta[i]) * cos_phi + p[1]
@@ -161,14 +162,14 @@ class NaITl(IDetector):
                  #it works now but keep an eye on this.... I think too many internal scatters are happening
         disc = np.sum((np.cross(n, self.a)* np.cross(n, self.a)))*self.r**2 - (np.sum(((self.b - O)* np.cross(n, self.a)))**2) #discriminant
         
-        with np.errstate(divide='ignore', invalid='ignore'): #Distances towards cylinder surface intersection points
+        with np.errstate(divide='ignore', invalid='ignore'): #Distance towards cylinder surface intersection points
             d1 = abs((np.sum(np.cross(n, self.a)* np.cross((self.b-O), self.a)) - np.sqrt(disc))/(np.sum(np.cross(n, self.a)*np.cross(n, self.a))))
             d2 = abs((np.sum(np.cross(n, self.a)* np.cross((self.b-O), self.a)) + np.sqrt(disc))/(np.sum(np.cross(n, self.a)*np.cross(n, self.a))))
         #should only really be d1 or d2 but they should be the same (disc ==0)
         #p1_cyl = O + n*d1
         #p2_cyl = O + n*d2
         #print(disc) #fmscl
-        dc1 = abs(np.sum(self.a*(self.b-O))/np.sum(self.a*n)) #distances towards cap intersections
+        dc1 = abs(np.sum(self.a*(self.b-O))/np.sum(self.a*n)) #distance towards cap intersections
         dc2 = abs(np.sum(self.a*(self.t-O))/np.sum(self.a*n))
         #p1_cap = O + n*dc1
         #p2_cap = O + n*dc2
@@ -204,9 +205,11 @@ class NaITl(IDetector):
                 else:
                     dist = dc2
                     #p = p2_cap
-        if -np.log(1-interaction_threshold)*(lifetime*3*10**10)*10 <= dist:#this is in mm (the distance is in cm*10)
-            #^This is rly small all of the time (same for the batch detects one)
-            dist_int = -np.log(1-interaction_threshold)*(lifetime*3*10**10)
+        
+        if -np.log(interaction_threshold)*(lifetime*3*10**10)*10 <= dist:#this is in mm (the distance is in cm*10)
+            #print("dist", dist, "interaction distance", -np.log(1-interaction_threshold)*(lifetime*3*10**10)*10)
+            #changed the interaction threshold calculation
+            dist_int = -np.log(interaction_threshold)*(lifetime*3*10**10)
             cos_phi = np.cos(phi)
             x_int = 10*dist_int * np.cos(theta) * cos_phi + O[0]#The point of interaction in mm
             y_int = 10*dist_int * np.sin(theta) * cos_phi +O[1]
