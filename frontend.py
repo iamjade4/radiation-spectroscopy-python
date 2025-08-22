@@ -5,8 +5,9 @@ from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit, QListWidgetItem, QListWidget
 from PyQt5.QtGui import QIntValidator #THE VALIDATORRR
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
-from detectors.naitl import NaITl
-from detectors.si import Si
+from detectors.scintillators.scintillator import Scintillator
+from detectors.scintillators.scintillators import *
+from detectors.solidstate.si import Si
 import time
 import matplotlib.pyplot as plt
 import numpy as np
@@ -50,6 +51,11 @@ class Detector(QWidget): #Window to add new detectors
         self.options = QComboBox()
         self.options.addItem('')
         self.options.addItem("NaITl")
+        self.options.addItem("CsITl")
+        self.options.addItem("LiIEu")
+        self.options.addItem("BGO")
+        self.options.addItem("CdWO")
+        self.options.addItem("CaWO")
         self.options.addItem("Si")
         self.options.setFixedHeight(30)
         self.options.setCurrentIndex(0)
@@ -193,18 +199,18 @@ class Detector(QWidget): #Window to add new detectors
 
     def detector_select(self):
         index = self.options.currentIndex()
-        if index == 1:
+        if index != 7:
             self.square_widget.setVisible(0)
             self.cyl_widget.setVisible(1)
-        elif index == 2:
+        elif index == 7:
             self.cyl_widget.setVisible(0)
             self.square_widget.setVisible(1)
 
     def add_detector(self):
-        if self.options.currentIndex() == 1:
+        if self.options.currentIndex() <= 6:
             self.inputs = [self.options.currentText(), self.base_input_x.text(), self.base_input_y.text(), self.base_input_z.text(), self.axis_input_x.text(), self.axis_input_y.text(), self.axis_input_z.text(), self.radius_input.text(), self.cyl_height_input.text()]
             self.parameters = self.cyl_defaults
-        elif self.options.currentIndex() ==2:
+        elif self.options.currentIndex() ==7:
             print("yerp")
             self.inputs = [self.options.currentText(), self.sq_height_input.text(), self.width_input.text(), self.depth_input.text(), self.normal_input_x.text(), self.normal_input_y.text(), self.normal_input_z.text(), self.pos_input_x.text(), self.pos_input_y.text(), self.pos_input_z.text()]
             self.parameters = self.sq_defaults
@@ -214,6 +220,17 @@ class Detector(QWidget): #Window to add new detectors
             #VV Just putting NaITl manually here for now
         if self.parameters[0] == 'NaITl':
             self.detector = NaITl([int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3])], [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), int(self.parameters[7]), int(self.parameters[8]))
+        elif self.parameters[0] == "CsITl":
+            self.detector = CsITl([int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3])], [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), int(self.parameters[7]), int(self.parameters[8]))
+        elif self.parameters[0] == 'LiIEu':
+            self.detector = LiIEu([int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3])], [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), int(self.parameters[7]), int(self.parameters[8]))
+        elif self.parameters[0] == 'BGO':
+            self.detector = BGO([int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3])], [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), int(self.parameters[7]), int(self.parameters[8]))
+        elif self.parameters[0] == 'CdWO':
+            self.detector = CdWO([int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3])], [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), int(self.parameters[7]), int(self.parameters[8]))
+        elif self.parameters[0] == 'CaWO':
+            self.detector = CaWO([int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3])], [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), int(self.parameters[7]), int(self.parameters[8]))
+        
         elif self.parameters[0] == 'Si':
             self.detector = Si(int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3]), [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), [int(self.parameters[7]), int(self.parameters[8]), int(self.parameters[9])])
         self.parent.add_detector_func()
@@ -304,6 +321,9 @@ class MainWindow(QMainWindow):
         
         self.det_list = QListWidget()
         self.det_list.hide()
+        self.det_list.setSelectionMode(1)
+        self.det_list.itemClicked.connect(self.on_item_clicked)
+        self.det_list.setFixedHeight(120)
         self.det_list_label = QLabel("Current Detectors:")
         self.det_list_label.setFixedHeight(30)
         self.det_list_label.hide()
@@ -423,6 +443,12 @@ class MainWindow(QMainWindow):
             self.det_list.show()
         self.detectors.append(self.window.detector)
         self.det_list.addItem(str(self.window.inputs))
+        
+    def on_item_clicked(self, item):
+        row = self.det_list.currentRow()
+        self.det_list.takeItem(row)
+        self.detectors.pop(row)
+        self.detect_num -= 1
         
     #main is down here now because its faster to get to it if its at either end of the file 
         #oh ok

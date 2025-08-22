@@ -1,21 +1,14 @@
+#This file is home to the parent Scintillator class
 import numpy as np
 import pandas as pd
 from interfaces import IDetector, IParticle
 from particles.photon import photon
 import math
-fano = 1 #This is intrinsic to scintillators in general, so will be defined here. Maybe if I make a parent class of Scintillator I could provide it there as the Fano factor tends to be 1 for all scintillators
-class NaITl(IDetector):
-    def __init__(self, base, axis, radius, height):
-        #this is a cylinder
-        self.b = base
-        self.a = axis
-        self.r = radius
-        self.h = height
-        self.t = self.b + self.a*self.h #top
-        self.fano = fano #This allows multiple detector types to be called at once by removing the need for fano to remain a single value, it is now inherent to the detector's instance
-        self.Z_n = 53*0.846627 + 11*0.153373 #fractional atomic numbers
-        self.n = 1.474*10**22 #number density
+fano = 1 
 
+class Scintillator(IDetector):
+    def __init__(self):
+        self.fano=fano
         
     def detects_batch(self, O, n, theta, phi, E, batch_size):
         compton_bool = False

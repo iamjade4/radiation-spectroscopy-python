@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from particles.photon import photon
-from detectors.naitl import NaITl
-from detectors.si import Si
+from detectors.scintillators.scintillator import Scintillator
+from detectors.scintillators.scintillators import *
+from detectors.solidstate.si import Si
 from multiprocessing import Pool
 
 #def get_detectors():
