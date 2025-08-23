@@ -1,5 +1,7 @@
 __pycache__/*
 detectors/__pycache__/*
+detectors/scintillators/__pycache__/*
+detectors/solidstate/__pycache__/*
 particles/__pycache__/*
 untitled0.py
 test.py

@@ -1,8 +1,8 @@
 import sys
 from multiprocessing import Manager
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit, QListWidgetItem, QListWidget
+from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal, QEvent
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit, QListWidgetItem, QListWidget, QDialog, QAction, QMenu
 from PyQt5.QtGui import QIntValidator #THE VALIDATORRR
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
 from detectors.scintillators.scintillator import Scintillator
@@ -211,7 +211,6 @@ class Detector(QWidget): #Window to add new detectors
             self.inputs = [self.options.currentText(), self.base_input_x.text(), self.base_input_y.text(), self.base_input_z.text(), self.axis_input_x.text(), self.axis_input_y.text(), self.axis_input_z.text(), self.radius_input.text(), self.cyl_height_input.text()]
             self.parameters = self.cyl_defaults
         elif self.options.currentIndex() ==7:
-            print("yerp")
             self.inputs = [self.options.currentText(), self.sq_height_input.text(), self.width_input.text(), self.depth_input.text(), self.normal_input_x.text(), self.normal_input_y.text(), self.normal_input_z.text(), self.pos_input_x.text(), self.pos_input_y.text(), self.pos_input_z.text()]
             self.parameters = self.sq_defaults
         for i in range(len(self.inputs)):
@@ -230,7 +229,6 @@ class Detector(QWidget): #Window to add new detectors
             self.detector = CdWO([int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3])], [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), int(self.parameters[7]), int(self.parameters[8]))
         elif self.parameters[0] == 'CaWO':
             self.detector = CaWO([int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3])], [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), int(self.parameters[7]), int(self.parameters[8]))
-        
         elif self.parameters[0] == 'Si':
             self.detector = Si(int(self.parameters[1]), int(self.parameters[2]), int(self.parameters[3]), [int(self.parameters[4]), int(self.parameters[5]), int(self.parameters[6])]/(np.sqrt(int(self.parameters[4])**2 + int(self.parameters[5])**2 + int(self.parameters[6])**2)), [int(self.parameters[7]), int(self.parameters[8]), int(self.parameters[9])])
         self.parent.add_detector_func()
@@ -312,7 +310,7 @@ class MainWindow(QMainWindow):
         self.add_detector_label.setFixedHeight(60)
         
         self.add_detector = QPushButton("Add detector")
-        self.add_detector.clicked.connect(self.detector)
+        self.add_detector.clicked.connect(self.detector, False)
         self.add_detector.setFixedHeight(30)
         
         self.detector_lim = QLabel("You have reached the detector limit of 4.")
@@ -322,7 +320,7 @@ class MainWindow(QMainWindow):
         self.det_list = QListWidget()
         self.det_list.hide()
         self.det_list.setSelectionMode(1)
-        self.det_list.itemClicked.connect(self.on_item_clicked)
+        self.det_list.installEventFilter(self)
         self.det_list.setFixedHeight(120)
         self.det_list_label = QLabel("Current Detectors:")
         self.det_list_label.setFixedHeight(30)
@@ -434,6 +432,7 @@ class MainWindow(QMainWindow):
         else:
             self.window = Detector(self)
             self.window.show()
+            
         
     def add_detector_func(self):
         self.detect_num += 1
@@ -444,15 +443,33 @@ class MainWindow(QMainWindow):
         self.detectors.append(self.window.detector)
         self.det_list.addItem(str(self.window.inputs))
         
-    def on_item_clicked(self, item):
-        row = self.det_list.currentRow()
-        self.det_list.takeItem(row)
-        self.detectors.pop(row)
+    def deleting(self):
+        self.det_list.takeItem(self.row)
         self.detect_num -= 1
+        self.detectors.pop(self.row)
+    
+    def eventFilter(self, source, event):
+        if event.type() == QEvent.ContextMenu and source is self.det_list:
+            menu = QMenu()
+            self.selectedDetector = self.det_list.currentItem()
+            self.row = self.det_list.currentRow()
+            self.delete = QAction("Delete")
+            self.delete.triggered.connect(self.deleting)
+            menu.addAction(self.delete)
+            if menu.exec_(event.globalPos()):
+                self.item = source.itemAt(event.pos())
+            return True
+        return super().eventFilter(source, event)
+
         
     #main is down here now because its faster to get to it if its at either end of the file 
         #oh ok
     def main(self):
+        if self.detect_num == 0: #with detector deletion you can now make a detector which deletes the defaults, and then delete said detector, leaving 0 detectors
+            self.detectors = [
+                NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120),  #cylinder with a radius of 6cm, height of 12cm, axis facing the origin
+                Si(120, 120, 1000, [1, 0, 0], [600, 0, 000])       # 12x12x0.1cm cuboidal detector
+            ]
         if self.use_text_input.isChecked():
             text = self.energy_input.text()
             if text.isdigit():
