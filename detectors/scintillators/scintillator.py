@@ -10,7 +10,7 @@ class Scintillator(IDetector):
     def __init__(self):
         self.fano=fano
         
-    def detects_batch(self, O, n, theta, phi, E, batch_size):
+    def detects_batch(self, O, n, theta, phi, E, batch_size, gain):
         compton_bool = False
         compton = 0 #number of compton scattered photons. It will be used to recursively call detects_batch for multiple scatters.
        
@@ -27,7 +27,6 @@ class Scintillator(IDetector):
                                                                "photon_s_z"])
         #Create a separate array for photoelectric electrons as it will have a different length
         photo_electrons = np.zeros(batch_size)
-        
         photo_mask = np.zeros(batch_size).astype(bool)
         compton_mask = np.zeros(batch_size).astype(bool)
         
@@ -144,7 +143,9 @@ class Scintillator(IDetector):
                     #totals += electron[8]
                     #bad += electron [9]
                 compton_electrons[i] = electron_E
-        return detected, np.concatenate((photo_electrons, compton_electrons)), total
+        total_E_list = np.concatenate((photo_electrons, compton_electrons))
+        scintillation_photons = total_E_list * self.ly
+        return detected, scintillation_photons/100 * gain, total
 
     #v This may end up being reduntant as I kind of want to use detects_batch again for all of the scatters within a batch, but I would need to change how getting angles works right now since it currently uses a single energy and not an array of energies. Would also need to make an array of crossections
     def detects_single(self, O, n, theta, phi, E, electron, t, i, angles): #this is just for compton photons   

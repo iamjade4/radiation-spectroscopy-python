@@ -17,16 +17,17 @@ plt.rcParams['axes.xmargin'] = 0
 
 class SimWorker(QObject):
     finished = pyqtSignal(object, object, object)
-    def __init__(self, n_photons, batch_size, E, detectors, progress_value):
+    def __init__(self, n_photons, batch_size, E, detectors, gain, progress_value):
         super().__init__()
         self.n_photons = n_photons
         self.batch_size = batch_size
         self.E = E
         self.detectors = detectors
+        self.gain = gain
         self.progress_value = progress_value
 
     def run(self):
-        result = backend.simulate(self.n_photons, self.batch_size, self.E, self.detectors, progress_value=self.progress_value)
+        result = backend.simulate(self.n_photons, self.batch_size, self.E, self.detectors, self.gain, progress_value=self.progress_value)
         self.finished.emit(*result)
 
 class Detector(QWidget): #Window to add new detectors
@@ -248,6 +249,7 @@ class MainWindow(QMainWindow):
         self.E = 662 #keV
         self.batch_size = 100_000
         self.n_photons = 10_000_000
+        self.gain = 1
         self.detectors = [
             NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120),  #cylinder with a radius of 6cm, height of 12cm, axis facing the origin
             Si(120, 120, 1000, [1, 0, 0], [600, 0, 000])       # 12x12x0.1cm cuboidal detector
@@ -304,6 +306,16 @@ class MainWindow(QMainWindow):
         self.use_text_input.setFixedHeight(30)
         self.use_text_input.stateChanged.connect(self.toggle_energy_input)
         
+        self.gain_label = QLabel(f"Gain: {self.gain}")
+        self.gain_label.setFixedHeight(30)
+        self.gain_slider = QSlider(Qt.Horizontal)
+        self.gain_slider.setRange(1, 8)
+        self.gain_slider.setValue(1)
+        self.gain_slider.setFixedHeight(30)
+        self.gain_slider.valueChanged.connect(self.gain_update)
+        self.gain_slider.setSingleStep(1)
+        self.gain_slider.setPageStep(1)
+        
         self.add_detector_label = QLabel("""If no detectors are added, default detectors are:
                                          NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120)
                                          Si(120, 120, 1000, [1, 0, 0], [600, 0, 000])""")
@@ -326,6 +338,10 @@ class MainWindow(QMainWindow):
         self.det_list_label.setFixedHeight(30)
         self.det_list_label.hide()
         
+        self.tip = QLabel("Try adjusting the gain if the spectrum takes up the entire window or seems squished")
+        self.tip.setFixedHeight(30)
+        self.tip.hide()
+        
         #Start button
         start_button = QPushButton("Start")
         start_button.clicked.connect(self.main) #This runs the main that was from the backend
@@ -340,6 +356,8 @@ class MainWindow(QMainWindow):
         self.left_layout.addWidget(self.energy_slider)
         self.left_layout.addWidget(self.energy_input)
         self.left_layout.addWidget(self.use_text_input)
+        self.left_layout.addWidget(self.gain_label)
+        self.left_layout.addWidget(self.gain_slider)
         self.left_layout.addWidget(self.add_detector_label)
         self.left_layout.addWidget(self.add_detector)
         self.left_layout.addWidget(start_button)
@@ -347,6 +365,7 @@ class MainWindow(QMainWindow):
         self.left_layout.addWidget(self.batch_prog)
         self.left_layout.addWidget(self.det_list_label)
         self.left_layout.addWidget(self.det_list)
+        self.left_layout.addWidget(self.tip)
         self.left_layout.addStretch()
         #right widget placeholder for matplotlib
         self.right_widget = QWidget()
@@ -397,6 +416,7 @@ class MainWindow(QMainWindow):
         fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
         self.display_fig(fig)
         self.running = False
+        self.tip.show()
 
         if self.patient:
             self.left_layout.removeWidget(self.patient)
@@ -422,7 +442,11 @@ class MainWindow(QMainWindow):
             if 1 <= val <= 1000:
                 self.E = val
                 self.E_box.setText(f"Energy: {val} keV (Default = 662 keV)")
-
+    
+    def gain_update(self, gain):
+        self.gain = int(gain)
+        self.gain_label.setText(f"Gain: {self.gain}")
+        
     def closeEvent(self, event):
         raise SystemExit(0)
     
@@ -495,7 +519,7 @@ class MainWindow(QMainWindow):
         self.progress_timer.start(100)
         detectors = self.detectors
         self.thread = QThread()
-        self.worker = SimWorker(self.n_photons, self.batch_size, self.E,detectors, self.progress_value)
+        self.worker = SimWorker(self.n_photons, self.batch_size, self.E,detectors, self.gain, self.progress_value)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.simulation_done)

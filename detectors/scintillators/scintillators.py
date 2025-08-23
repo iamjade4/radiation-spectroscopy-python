@@ -17,6 +17,7 @@ class NaITl(Scintillator):
         self.Z_n = 53*0.846627 + 11*0.153373 #fractional atomic numbers
         self.n_m = 1.474*10**22 #molecular number density
         self.n = 2*self.n_m #atomic number density
+        self.ly = 38 #light yield in photons/keV
         super().__init__()
 
 class CsITl(Scintillator):
@@ -30,6 +31,7 @@ class CsITl(Scintillator):
         self.Z_n = 53*0.488451 + 55*0.511549 #fractional atomic numbers
         self.n_m = 1.024*10**22 #molecular number density
         self.n = 2*self.n_m #atomic number density
+        self.ly = 65
         super().__init__()
 
 class LiIEu(Scintillator):
@@ -43,6 +45,7 @@ class LiIEu(Scintillator):
         self.Z_n = 3*0.051858 + 53*0.948142 #fractional atomic numbers
         self.n_m = 1.8066*10**22 
         self.n = 2*self.n_m
+        self.ly = 11
         super().__init__()
 
 class BGO(Scintillator):
@@ -56,6 +59,7 @@ class BGO(Scintillator):
         self.Z_n =  8*0.154119 + 32*0.174859 + 83*0.671022#fractional atomic numbers
         self.n_m = 0.3447*10**22
         self.n = 19*self.n_m
+        self.ly = 8.2
         super().__init__()
 
 class CdWO(Scintillator):
@@ -69,6 +73,7 @@ class CdWO(Scintillator):
         self.Z_n =  8*0.177644 + 48*0.312029 + 74*0.510328#fractional atomic numbers
         self.n_m = 0.1321*10**22
         self.n = 6*self.n_m
+        self.ly = 15
         super().__init__()
 
 class CaWO(Scintillator):
@@ -82,4 +87,5 @@ class CaWO(Scintillator):
         self.Z_n =  8*0.222271 + 20*0.139196 + 74*0.638533#fractional atomic numbers
         self.n_m = 0.1276*10**22
         self.n = 6*self.n_m
+        self.ly = 15
         super().__init__()

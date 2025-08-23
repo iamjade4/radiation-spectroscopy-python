@@ -14,7 +14,7 @@ from multiprocessing import Pool
     
 
 
-def simulate_batch(batch_size: int, E: float, detectors):
+def simulate_batch(batch_size: int, E: float, detectors, gain):
     theta = np.random.uniform(0, 2 * np.pi, batch_size)
     phi = np.random.uniform(-np.pi/2, np.pi/2, batch_size)
     directions = photon.batch_calculate_direction(theta, phi)
@@ -25,13 +25,13 @@ def simulate_batch(batch_size: int, E: float, detectors):
 
     for idx, det in enumerate(detectors):
         mask, batch_energies, total_dtd = det.detects_batch(
-            origins, directions, theta, phi, E, batch_size
+            origins, directions, theta, phi, E, batch_size, gain
         )
         total[idx] += np.sum(total_dtd)
         detected_counts[idx] += mask #mask is no longer a list of True/False
         energies[idx].extend(batch_energies)# this adds the cumulative data, previously you were only plotting the last batch (unless thats what you wanted to do in which case, sorry)
-
-    return detected_counts, energies, total
+                                            
+    return detected_counts, energies, total #energies are no longer actual energies, but are the number of scintillation photons produced/100 *gain
 
 def combine_results(results):
     n_detectors = len(results[0][0])
@@ -47,12 +47,12 @@ def combine_results(results):
 
     return total_detected, total_energies, total_totals
 
-def simulate(n_photons: int, batch_size: int, E: float, detectors: list, progress_value=None):
+def simulate(n_photons: int, batch_size: int, E: float, detectors: list, gain, progress_value=None):
     if E == 0:
         print("WARNING. 0 PASSED INTO E.")
 
     n_batches = n_photons // batch_size
-    args = [(batch_size, E, detectors) for _ in range(n_batches)]
+    args = [(batch_size, E, detectors, gain) for _ in range(n_batches)]
     results = []
 
     with Pool() as pool:
