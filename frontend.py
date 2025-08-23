@@ -489,6 +489,7 @@ class MainWindow(QMainWindow):
     #main is down here now because its faster to get to it if its at either end of the file 
         #oh ok
     def main(self):
+        print(self.detect_num)
         if self.detect_num == 0: #with detector deletion you can now make a detector which deletes the defaults, and then delete said detector, leaving 0 detectors
             self.detectors = [
                 NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120),  #cylinder with a radius of 6cm, height of 12cm, axis facing the origin
