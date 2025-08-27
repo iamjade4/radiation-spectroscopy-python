@@ -9,6 +9,7 @@ from detectors.scintillators.scintillator import Scintillator
 from detectors.scintillators.scintillators import *
 from detectors.solidstate.si import Si
 import time
+import csv
 import matplotlib.pyplot as plt
 import numpy as np
 import backend
@@ -16,7 +17,7 @@ import backend
 plt.rcParams['axes.xmargin'] = 0
 
 class SimWorker(QObject):
-    finished = pyqtSignal(object, object, object)
+    finished = pyqtSignal(object, object, object, object, object)
     def __init__(self, n_photons, batch_size, E, detectors, gain, progress_value):
         super().__init__()
         self.n_photons = n_photons
@@ -250,6 +251,8 @@ class MainWindow(QMainWindow):
         self.batch_size = 100_000
         self.n_photons = 10_000_000
         self.gain = 1
+        self.output = False
+        self.filename = "output"
         self.detectors = [
             NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120),  #cylinder with a radius of 6cm, height of 12cm, axis facing the origin
             Si(120, 120, 1000, [1, 0, 0], [600, 0, 000])       # 12x12x0.1cm cuboidal detector
@@ -325,6 +328,15 @@ class MainWindow(QMainWindow):
         self.add_detector.clicked.connect(self.detector, False)
         self.add_detector.setFixedHeight(30)
         
+        self.outcheck = QCheckBox("Check to output a log file")
+        self.outcheck.setFixedHeight(30)
+        self.outcheck.stateChanged.connect(self.output_toggled)
+        
+        self.output_input = QLineEdit("output")
+        self.output_input.setFixedHeight(30)
+        self.output_input.setDisabled(True)
+        self.output_input.textChanged.connect(self.output_update)
+        
         self.detector_lim = QLabel("You have reached the detector limit of 4.")
         self.detector_lim.setFixedHeight(30)
         self.detector_lim.hide()
@@ -358,6 +370,8 @@ class MainWindow(QMainWindow):
         self.left_layout.addWidget(self.use_text_input)
         self.left_layout.addWidget(self.gain_label)
         self.left_layout.addWidget(self.gain_slider)
+        self.left_layout.addWidget(self.outcheck)
+        self.left_layout.addWidget(self.output_input)
         self.left_layout.addWidget(self.add_detector_label)
         self.left_layout.addWidget(self.add_detector)
         self.left_layout.addWidget(start_button)
@@ -398,6 +412,19 @@ class MainWindow(QMainWindow):
         self.E_box.setText(f"Energy: {E} keV (Default = 662 keV)")
         if self.use_text_input.isChecked():
             self.energy_input.setText(str(E))
+        
+    def output_toggled(self, state):
+        if state == Qt.Checked:
+            self.output_input.setDisabled(False)
+            self.output = True
+            self.filename = str(self.output_input.text())
+        else:
+            self.output_input.setDisabled(True)
+            self.output = False
+    
+    def output_update(self):
+        output = self.output_input.text()
+        self.filename = str(output)
 
     def poll_progress(self):
         if self.progress_value:
@@ -406,13 +433,22 @@ class MainWindow(QMainWindow):
             if val >= 100:
                 self.batch_prog.setValue(100)
 
-    def simulation_done(self, detected_counts, energies, total):
+    def simulation_done(self, detected_counts, energies, total, positions, out_energies):
         self.progress_timer.stop()
         self.batch_prog.setValue(100)
+        if self.output == True:
+            f = open(self.filename+".csv", "w")
+            f.close()
         for idx, count in enumerate(detected_counts, start=1):
             print(total[idx - 1] / count * 100, "% Detector efficiency")
             print(f"detected {total[idx-1]} photons")
-
+            if self.output == True:
+                f = open((self.filename+".csv"), "a")
+                out = zip(out_energies[idx-1], positions[idx-1]) #the way this is done is that it prints one detector after the other. I could choose to make it output into two different files though
+                writer = csv.writer(f, delimiter='\t')
+                #writer.writerows(("Detector "+str(idx)+" energies:", "Detector "+str(idx)+" positions:" )) #Would uncomment this but you'd probably just want it out as just numbers to go through
+                writer.writerows(out)
+                f.close()
         fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
         self.display_fig(fig)
         self.running = False
@@ -489,7 +525,7 @@ class MainWindow(QMainWindow):
     #main is down here now because its faster to get to it if its at either end of the file 
         #oh ok
     def main(self):
-        print(self.detect_num)
+        #print(self.detect_num)
         if self.detect_num == 0: #with detector deletion you can now make a detector which deletes the defaults, and then delete said detector, leaving 0 detectors
             self.detectors = [
                 NaITl([600, 100, 0], [6, 1, 0]/(np.sqrt(37)), 60, 120),  #cylinder with a radius of 6cm, height of 12cm, axis facing the origin

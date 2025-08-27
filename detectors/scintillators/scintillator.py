@@ -29,6 +29,8 @@ class Scintillator(IDetector):
         photo_electrons = np.zeros(batch_size)
         photo_mask = np.zeros(batch_size).astype(bool)
         compton_mask = np.zeros(batch_size).astype(bool)
+        positions = np.zeros(shape = (batch_size, 3))
+        position_mask = np.zeros(batch_size).astype(bool)
         
         detected = 0
         #horrible array setups
@@ -93,6 +95,9 @@ class Scintillator(IDetector):
                     x_int = 10*dist_int * np.cos(theta[i]) * cos_phi + p[0]#The point of interaction 
                     y_int = 10*dist_int * np.sin(theta[i]) * cos_phi + p[1]
                     z_int = 10*dist_int * np.sin(phi[i]) + p[2] #This makes it kinda slow due to all of the trig
+                    position = x_int, y_int, z_int
+                    positions[i] = position
+                    position_mask[i] = True
                     if interaction_type <= threshold: #my photopeak..... so so small
                         electron_E = (photon.photoelectric(theta[i], phi[i], E, x_int, y_int, z_int, dist_int, self.fano))
                         photo_electrons[i] = electron_E
@@ -143,9 +148,11 @@ class Scintillator(IDetector):
                     #totals += electron[8]
                     #bad += electron [9]
                 compton_electrons[i] = electron_E
+                
         total_E_list = np.concatenate((photo_electrons, compton_electrons))
         scintillation_photons = total_E_list * self.ly
-        return detected, scintillation_photons/100 * gain, total
+        positions = positions[position_mask]
+        return detected, scintillation_photons/100 * gain, total, total_E_list, positions
 
     #v This may end up being reduntant as I kind of want to use detects_batch again for all of the scatters within a batch, but I would need to change how getting angles works right now since it currently uses a single energy and not an array of energies. Would also need to make an array of crossections
     def detects_single(self, O, n, theta, phi, E, electron, t, i, angles): #this is just for compton photons   

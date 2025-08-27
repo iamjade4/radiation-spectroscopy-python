@@ -70,6 +70,7 @@ class Si(IDetector):
         #Origins is (100000, 3) and I want to pull (100000,x) out of it
         positions = origins + np.dot(tclose, directions)
         positions = positions.reshape(-1,3)
+        position_mask = np.zeros(batch_size).astype(bool)
         
         x = np.where(tclose <= tfar, positions[:,0], None)
         y = np.where(tclose <= tfar, positions[:,1], None)
@@ -80,12 +81,13 @@ class Si(IDetector):
         tclose_det = np.where(tclose <= tfar, tclose, None)
         for i in range(batch_size):
             if tclose[i] <= tfar[i]:
+                position_mask[i] = True
                 detected +=1
                 electron_E = (photon.photoelectric(thetas[i], phis[i], E, x[i], y[i], z[i], tclose_det[i], self.fano))  
                 electrons.append(round(electron_E)) #rounding to an int here. Realistically, it will just be put into a channel number for spectroscopy but rounding is easiest for now
                 #Silicon detectors are generally more suited to direct detection of charged particles, and not necessarily of photons due to their much smaller detector volume compared to that of scintillators. For now however, for the sake of comparison of energy resolutions, I will keep the photoelectric method here
         
-        #print(positions)
-        return detected, electrons*gain, detected #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
+        positions = positions[position_mask]
+        return detected, electrons*gain, detected, electrons, positions #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
             
         
