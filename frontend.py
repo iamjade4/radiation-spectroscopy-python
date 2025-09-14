@@ -417,14 +417,21 @@ class MainWindow(QMainWindow):
         if state == Qt.Checked:
             self.output_input.setDisabled(False)
             self.output = True
-            self.filename = str(self.output_input.text())
+            if str(self.output_input.text()) == "logs1" or str(self.output_input.text()) == "logs2" or str(self.output_input.text()) == "logs3" or str(self.output_input.text()) == "logs4": #prevents the user from naming their logfile the same thing as the auto-generated logfile
+                self.filename= str(self.output_input.text()) + "a"
+                print("checking")
+            else:
+                self.filename = str(self.output_input.text())
         else:
             self.output_input.setDisabled(True)
             self.output = False
     
     def output_update(self):
         output = self.output_input.text()
-        self.filename = str(output)
+        if str(output) == "logs1" or str(output) == "logs2" or str(output) == "logs3" or str(output) == "logs4": #prevents the user from naming their logfile the same thing as the auto-generated logfile
+            self.filename= str(output) + "a"
+        else:
+            self.filename = str(output)
 
     def poll_progress(self):
         if self.progress_value:
@@ -432,32 +439,6 @@ class MainWindow(QMainWindow):
             self.batch_prog.setValue(val)
             if val >= 100:
                 self.batch_prog.setValue(100)
-
-    def simulation_done(self, detected_counts, energies, total, positions, out_energies):
-        self.progress_timer.stop()
-        self.batch_prog.setValue(100)
-        if self.output == True:
-            f = open(self.filename+".csv", "w")
-            f.close()
-        for idx, count in enumerate(detected_counts, start=1):
-            print(total[idx - 1] / count * 100, "% Detector efficiency")
-            print(f"detected {total[idx-1]} photons")
-            if self.output == True:
-                f = open((self.filename+".csv"), "a")
-                out = zip(out_energies[idx-1], positions[idx-1]) #the way this is done is that it prints one detector after the other. I could choose to make it output into two different files though
-                writer = csv.writer(f, delimiter='\t')
-                #writer.writerows(("Detector "+str(idx)+" energies:", "Detector "+str(idx)+" positions:" )) #Would uncomment this but you'd probably just want it out as just numbers to go through
-                writer.writerows(out)
-                f.close()
-        fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
-        self.display_fig(fig)
-        self.running = False
-        self.tip.show()
-
-        if self.patient:
-            self.left_layout.removeWidget(self.patient)
-            self.patient.deleteLater()
-            self.patient = None
 
     def toggle_energy_input(self, state):
         if state == Qt.Checked:
@@ -521,7 +502,37 @@ class MainWindow(QMainWindow):
             return True
         return super().eventFilter(source, event)
 
-        
+    def simulation_done(self, detected_counts, energies, total, positions, out_energies):
+        self.progress_timer.stop()
+        self.batch_prog.setValue(100)
+        total_energies = []
+        if self.output == True:
+            f = open(self.filename+".csv", "w")
+            f.close()
+        for idx, count in enumerate(detected_counts, start=1):
+            print(total[idx - 1] / count * 100, "% Detector efficiency")
+            print(f"detected {total[idx-1]} photons")
+            if self.output == True:
+                f = open((self.filename+".csv"), "a") #This is the optional output file with more information for the user
+                out = zip(out_energies[idx-1], positions[idx-1]) #the way this is done is that it prints one detector after the other. I could choose to make it output into two different files though
+                writer = csv.writer(f, delimiter='\t')
+                #writer.writerows(("Detector "+str(idx)+" energies:", "Detector "+str(idx)+" positions:" )) #Would uncomment this but you'd probably just want it out as just numbers to go through
+                writer.writerows(out)
+                f.close()
+            #V these are the actual logs that K wants. theoretically this program could use them to plot figures from them but I don't see a point in changing that until i get rid of matplotlib
+            f = open("logs"+str(idx)+".csv", "w") #will need to prevent the user from calling their generated file "logs"
+            f.write("\n".join(str(e) for e in energies[idx-1]) + "\n")
+            f.close()
+
+        fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
+        self.display_fig(fig)
+        self.running = False
+        self.tip.show()
+
+        if self.patient:
+            self.left_layout.removeWidget(self.patient)
+            self.patient.deleteLater()
+            self.patient = None
     #main is down here now because its faster to get to it if its at either end of the file 
         #oh ok
     def main(self):
