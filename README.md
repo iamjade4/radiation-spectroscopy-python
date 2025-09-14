@@ -15,11 +15,11 @@ This program is primarily developed and tested on Linux. The installation proces
 Download python **3.13.5** or later (earlier might work, but this is the version currently developed on). If you are on windows make sure to add python to your PATH.
 
 Download the following python dependencies (either through pip or a package manager):
-- Matplotlib
 - Numpy
 - Scipy
 - PyQT5 (PyQT5 is used over 6 due to matplotlib compatibility)
 - pandas
+- pyqtgraph
 
 Currently we do not do releases, either download this repository as a .zip or `git clone https://github.com/iamjade4/radiation-spectroscopy-python.git` into your folder of choice. 
 

@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from particles.photon import photon
 from detectors.scintillators.scintillator import Scintillator
 from detectors.scintillators.scintillators import *
@@ -73,10 +73,10 @@ def simulate(n_photons: int, batch_size: int, E: float, detectors: list, gain, p
 def simulate_batch_wrapper(args):
     return simulate_batch(*args)
 
-def plot_spectra(energies: list, bins: int = 1024, energy_range=(0, 1000)):
-    num_det = len(energies)
-    fig, axs = plt.subplots(num_det, 1, figsize=(10, 4 * num_det), squeeze=False)
-    for i, (ax, detector_energies) in enumerate(zip(axs.flat, energies)):
-        ax.hist(detector_energies, bins=bins, range=energy_range, histtype='step')
-    plt.tight_layout()
-    return fig
+# def plot_spectra(energies: list, bins: int = 1024, energy_range=(0, 1024)):
+#     num_det = len(energies)
+#     fig, axs = plt.subplots(num_det, 1, figsize=(10, 4 * num_det), squeeze=False)
+#     for i, (ax, detector_energies) in enumerate(zip(axs.flat, energies)):
+#         ax.hist(detector_energies, bins=bins, range=energy_range, histtype='step')
+#     plt.tight_layout()
+#     return fig

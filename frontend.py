@@ -1,16 +1,17 @@
 import sys
 from multiprocessing import Manager
+import pyqtgraph as pg
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal, QEvent
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit, QListWidgetItem, QListWidget, QDialog, QAction, QMenu
 from PyQt5.QtGui import QIntValidator #THE VALIDATORRR
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
+#from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
 from detectors.scintillators.scintillator import Scintillator
 from detectors.scintillators.scintillators import *
 from detectors.solidstate.si import Si
 import time
 import csv
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
 import backend
 
@@ -397,12 +398,19 @@ class MainWindow(QMainWindow):
     def n_photons_drop(self, n):
         self.n_photons = int(n.replace("_", ""))
 
-    def display_fig(self, fig):
-        if self.figure_canvas:
-            self.right_layout.removeWidget(self.figure_canvas)
-            self.figure_canvas.deleteLater()
-        self.figure_canvas = Figcan(fig)
-        self.right_layout.addWidget(self.figure_canvas)
+    def display_fig(self, energies):
+        if hasattr(self, 'graph'): #clearing the graph if ran again
+            self.right_layout.removeWidget(self.graph)
+        self.graph = pg.GraphicsLayoutWidget()
+        self.right_layout.addWidget(self.graph)
+        self.viewbox = pg.ViewBox()
+        self.viewbox.setXRange(0, 1024)
+        self.plt = [[] for _ in range(len(energies))]
+        for i in range(len(energies)):
+            self.plt[i] = self.graph.addPlot()
+            y,x = np.histogram(energies[i], bins = 1024)
+            curve = pg.PlotCurveItem(x, y, stepMode=True, viewBox = self.viewbox)
+            self.plt[i].addItem(curve)
 
     def batch(self, b):
         self.batch_size = int(b.replace("_", ""))
@@ -524,8 +532,8 @@ class MainWindow(QMainWindow):
             f.write("\n".join(str(e) for e in energies[idx-1]) + "\n")
             f.close()
 
-        fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
-        self.display_fig(fig)
+        #fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
+        self.display_fig(energies)
         self.running = False
         self.tip.show()
 
