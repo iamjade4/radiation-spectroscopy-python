@@ -15,7 +15,7 @@ import csv
 import numpy as np
 import backend
 
-plt.rcParams['axes.xmargin'] = 0
+#plt.rcParams['axes.xmargin'] = 0
 
 class SimWorker(QObject):
     finished = pyqtSignal(object, object, object, object, object)
@@ -403,15 +403,16 @@ class MainWindow(QMainWindow):
             self.right_layout.removeWidget(self.graph)
         self.graph = pg.GraphicsLayoutWidget()
         self.right_layout.addWidget(self.graph)
-        self.viewbox = pg.ViewBox()
-        self.viewbox.setXRange(0, 1024)
         self.plt = [[] for _ in range(len(energies))]
         for i in range(len(energies)):
-            self.plt[i] = self.graph.addPlot()
+            self.plt[i] = self.graph.addPlot(row = i, col = 0)
             y,x = np.histogram(energies[i], bins = 1024)
-            curve = pg.PlotCurveItem(x, y, stepMode=True, viewBox = self.viewbox)
+            curve = pg.PlotCurveItem(x, y, stepMode=True)
+            self.plt[i].setXRange(0, 1024, padding = 0)
             self.plt[i].addItem(curve)
-
+            self.plt[i].setTitle("Detector " + str(i+1))
+            self.plt[i].setLabel("left", "Counts")
+            self.plt[i].setLabel("bottom", "Channel Number")
     def batch(self, b):
         self.batch_size = int(b.replace("_", ""))
 
