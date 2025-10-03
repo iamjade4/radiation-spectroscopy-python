@@ -3,7 +3,7 @@ from multiprocessing import Manager
 import pyqtgraph as pg
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal, QEvent
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit, QListWidgetItem, QListWidget, QDialog, QAction, QMenu
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit, QListWidgetItem, QListWidget, QDialog, QAction, QMenu, QToolBar, QMenuBar
 from PyQt5.QtGui import QIntValidator #THE VALIDATORRR
 #from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
 from detectors.scintillators.scintillator import Scintillator
@@ -18,7 +18,7 @@ import backend
 #plt.rcParams['axes.xmargin'] = 0
 
 class SimWorker(QObject):
-    finished = pyqtSignal(object, object, object, object, object)
+    finished = pyqtSignal(object, object, object, object, object, object)
     def __init__(self, n_photons, batch_size, E, detectors, gain, progress_value):
         super().__init__()
         self.n_photons = n_photons
@@ -31,6 +31,33 @@ class SimWorker(QObject):
     def run(self):
         result = backend.simulate(self.n_photons, self.batch_size, self.E, self.detectors, self.gain, progress_value=self.progress_value)
         self.finished.emit(*result)
+
+class Positions2d(QWidget): #Window for displaying positional graph
+    def __init__(self, parent, polar_positions):
+        super(Positions2d, self).__init__(parent=None)
+        self.parent = parent
+        self.polar_positions = polar_positions[0]*180/np.pi #Just the first detector for nyow
+                                                            #ITS OFFSET BY 180 DEGREES NOOO BUT I DONT WANT TO TAKE 180 FROM EACH THING IF THEYRE OVER 180
+        self.layout = QVBoxLayout()
+        self.plotWidget = pg.PlotWidget(title = "Total detections")
+        self.scatter = pg.ScatterPlotItem(size = 5, brush=pg.mkBrush(255, 255, 255, 120))
+        self.scatter.addPoints(self.polar_positions[:, 0], self.polar_positions[:,1])
+        #self.plotWidget.scatterPlot(self.polar_positions)
+        self.plotWidget.addItem(self.scatter)
+        self.plotWidget.show()
+        # self.imv = pg.ImageView(view = pg.PlotItem())
+        # self.imv.show()
+        # resolution = 512
+        # min_X = -180
+        # max_X = 180
+        # bins = np.linspace(min_X, max_X, resolution + 1)
+        # X_binned = np.digitize(self.polar_positions, bins) - 1
+        # print(np.shape(self.polar_positions)) #WHY DOES IT THINK THE X COORDINATE (or Y for transpose) IS THE LENGTH OF THE ARRAY???
+        # images = np.zeros((X_binned.shape[0], resolution, resolution, 1), dtype=np.uint8)
+        # images[np.ix_(np.arange(self.polar_positions[0]), *X_binned,T, [0])] = 1
+        # self.data = images
+        # self.imv.setImage(img = self.data)
+        self.layout.addWidget(self.plotWidget)
 
 class Detector(QWidget): #Window to add new detectors
     def __init__(self, parent):
@@ -246,6 +273,7 @@ class MainWindow(QMainWindow):
         self.batch_prog = None
         self.figure_canvas = None
         self.detect_num = 0
+        self.polar_positions = np.array([[[0, 0], [1, 1]]])
         
         #defaults
         self.E = 662 #keV
@@ -267,7 +295,19 @@ class MainWindow(QMainWindow):
         self.left_widget = QWidget()
         self.left_layout = QVBoxLayout()
         self.left_widget.setLayout(self.left_layout)
-
+        
+        ### --------------------------------------------------------------- DEFINING THE TOOLBAR AND ITS WIDGETS ---------------------------------------------------------------------- ###
+        self.menubar = QMenuBar(self)
+        self.fileMenu = QMenu("File", self)
+        self.showPositions = QAction(text = "Show positions")
+        self.showPositions.triggered.connect(self.show_positions)
+        
+        self.fileMenu.addAction(self.showPositions)
+        self.menubar.addMenu(self.fileMenu)
+        self.setMenuBar(self.menubar)
+        ### ------------------------------------------------------------------- YOU HAVE LEFT TOOLBAR LAND --------------------------------------------------------------------------- ###
+        
+        
         #First box and text
         photon_drop = QComboBox()
         photon_drop.addItems(["1_000_000", "10_000_000", "100_000_000"])
@@ -395,6 +435,10 @@ class MainWindow(QMainWindow):
         self.progress_timer = QTimer()
         self.progress_timer.timeout.connect(self.poll_progress)
 
+    def show_positions(self): #For creating a new window for a graph
+        self.pos_window = Positions2d(self, self.polar_positions)
+        self.pos_window.show()
+
     def n_photons_drop(self, n):
         self.n_photons = int(n.replace("_", ""))
 
@@ -510,8 +554,8 @@ class MainWindow(QMainWindow):
                 self.item = source.itemAt(event.pos())
             return True
         return super().eventFilter(source, event)
-
-    def simulation_done(self, detected_counts, energies, total, positions, out_energies):
+    ### ----------------------------------------------------------SIM DONE ----------------------------------------------------------- ###
+    def simulation_done(self, detected_counts, energies, total, positions, out_energies, polar_positions):
         self.progress_timer.stop()
         self.batch_prog.setValue(100)
         total_energies = []
@@ -532,7 +576,7 @@ class MainWindow(QMainWindow):
             f = open("logs"+str(idx)+".csv", "w") #will need to prevent the user from calling their generated file "logs"
             f.write("\n".join(str(e) for e in energies[idx-1]) + "\n")
             f.close()
-
+        self.polar_positions = np.array(polar_positions)
         #fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
         self.display_fig(energies)
         self.running = False

@@ -70,6 +70,7 @@ class Si(IDetector):
         #Origins is (100000, 3) and I want to pull (100000,x) out of it
         positions = origins + np.dot(tclose, directions)
         positions = positions.reshape(-1,3)
+        polar_positions = theta, phi
         position_mask = np.zeros(batch_size).astype(bool)
         
         x = np.where(tclose <= tfar, positions[:,0], None)
@@ -88,6 +89,7 @@ class Si(IDetector):
                 #Silicon detectors are generally more suited to direct detection of charged particles, and not necessarily of photons due to their much smaller detector volume compared to that of scintillators. For now however, for the sake of comparison of energy resolutions, I will keep the photoelectric method here
         
         positions = positions[position_mask]
-        return detected, electrons*gain, detected, electrons, positions #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
+        polar_positions = polar_positions[position_mask]
+        return detected, electrons*gain, detected, electrons, positions, polar_positions #The electron is returning a 2d array of ALL of the different electron energies. For now it will all be 662        
             
         

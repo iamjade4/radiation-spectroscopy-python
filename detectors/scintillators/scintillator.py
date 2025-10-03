@@ -31,6 +31,7 @@ class Scintillator(IDetector):
         compton_mask = np.zeros(batch_size).astype(bool)
         positions = np.zeros(shape = (batch_size, 3))
         position_mask = np.zeros(batch_size).astype(bool)
+        polar_positions = np.zeros(shape = (batch_size, 2)) #realistically this isn't needed since phi and theta are already inputs and this is just reassigning them 
         
         detected = 0
         #horrible array setups
@@ -97,6 +98,8 @@ class Scintillator(IDetector):
                     z_int = 10*dist_int * np.sin(phi[i]) + p[2] #This makes it kinda slow due to all of the trig
                     position = x_int, y_int, z_int
                     positions[i] = position
+                    polar_position = theta[i], phi[i]
+                    polar_positions[i] = polar_position
                     position_mask[i] = True
                     if interaction_type <= threshold: #my photopeak..... so so small
                         electron_E = (photon.photoelectric(theta[i], phi[i], E, x_int, y_int, z_int, dist_int, self.fano))
@@ -152,7 +155,8 @@ class Scintillator(IDetector):
         total_E_list = np.concatenate((photo_electrons, compton_electrons))
         scintillation_photons = total_E_list * self.ly
         positions = positions[position_mask]
-        return detected, scintillation_photons/100 * gain, total, total_E_list, positions
+        polar_positions = polar_positions[position_mask]
+        return detected, scintillation_photons/100 * gain, total, total_E_list, positions, polar_positions
 
     #v This may end up being reduntant as I kind of want to use detects_batch again for all of the scatters within a batch, but I would need to change how getting angles works right now since it currently uses a single energy and not an array of energies. Would also need to make an array of crossections
     def detects_single(self, O, n, theta, phi, E, electron, t, i, angles): #this is just for compton photons   

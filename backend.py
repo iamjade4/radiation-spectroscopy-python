@@ -24,8 +24,9 @@ def simulate_batch(batch_size: int, E: float, detectors, gain):
     energies = [[] for _ in detectors]
     out_energies = [[] for _ in detectors]
     positions = [[] for _ in detectors]
+    polar_positions = [[] for _ in detectors]
     for idx, det in enumerate(detectors):
-        mask, batch_energies, total_dtd, out_energies_s, positions_s = det.detects_batch(
+        mask, batch_energies, total_dtd, out_energies_s, positions_s, polar_positions_s = det.detects_batch(
             origins, directions, theta, phi, E, batch_size, gain
         )
         total[idx] += np.sum(total_dtd)
@@ -33,8 +34,9 @@ def simulate_batch(batch_size: int, E: float, detectors, gain):
         energies[idx].extend(batch_energies)# this adds the cumulative data, previously you were only plotting the last batch (unless thats what you wanted to do in which case, sorry)
         out_energies[idx].extend(out_energies_s)
         positions[idx].extend(positions_s)
+        polar_positions[idx].extend(polar_positions_s)
 
-    return detected_counts, energies, total, positions, out_energies #energies are no longer actual energies, but are the number of scintillation photons produced/100 *gain
+    return detected_counts, energies, total, positions, out_energies, polar_positions #energies are no longer actual energies, but are the number of scintillation photons produced/100 *gain
 
 def combine_results(results):
     n_detectors = len(results[0][0])
@@ -43,16 +45,18 @@ def combine_results(results):
     total_positions = [[] for _ in range(n_detectors)]
     total_out_energies = [[] for _ in range(n_detectors)]
     total_totals = [0] * n_detectors
+    total_polar_positions = [[] for _ in range(n_detectors)]
 
-    for detected_counts, energies, total, positions, out_energies in results:
+    for detected_counts, energies, total, positions, out_energies, polar_positions in results:
         for i in range(n_detectors):
             total_detected[i] += detected_counts[i]
             total_totals[i] += total[i]
             total_energies[i].extend(energies[i])
             total_positions[i].extend(positions[i])
             total_out_energies[i].extend(out_energies[i])
+            total_polar_positions[i].extend(polar_positions[i])
 
-    return total_detected, total_energies, total_totals, total_positions, total_out_energies
+    return total_detected, total_energies, total_totals, total_positions, total_out_energies, total_polar_positions
 
 def simulate(n_photons: int, batch_size: int, E: float, detectors: list, gain, progress_value=None):
     if E == 0:
