@@ -1,10 +1,10 @@
 import sys
 from multiprocessing import Manager
-import pyqtgraph as pg
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QThread, QTimer, QObject, pyqtSignal, QEvent
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QSlider, QLabel, QPushButton, QProgressBar, QCheckBox, QLineEdit, QListWidgetItem, QListWidget, QDialog, QAction, QMenu, QToolBar, QMenuBar
 from PyQt5.QtGui import QIntValidator #THE VALIDATORRR
+import pyqtgraph as pg
 #from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Figcan
 from detectors.scintillators.scintillator import Scintillator
 from detectors.scintillators.scintillators import *
