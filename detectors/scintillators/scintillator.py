@@ -70,7 +70,7 @@ class Scintillator(IDetector):
         #print(compton_csc, photo_csc)#FIXED THIS!! compton_csc was in mB so it was 1000x bigger than it's supposed to be!
         total = 0
         for i in range(batch_size):
-            if (disc[i] >=0 and self.b[0] <= p1_cyl[i,0] <= self.t[0] and self.b[1] <= p1_cyl[i, 1] <= self.t[1] and self.b[2] <= p1_cyl[i,2] <= self.t[2]) or capcheck1[i] == True: #need to sort out  a check for the end caps
+            if (disc[i] >=0 and self.b[0] <= p1_cyl[i,0] <= self.t[0] and self.b[1] <= p1_cyl[i, 1] <= self.t[1] and self.b[2] <= p1_cyl[i,2] <= self.t[2]) and d1[i] > 0 or capcheck1[i] == True and dc1[i, 1] >0: #need to sort out  a check for the end caps
                 detected += 1                #Going to compute interaction probability based off of photon cross sections
                 if capcheck1[i] == False:
                     dist = abs(np.sum(d2[i,0] - d1[i,0])) #distance travelled inside of the detector (cm)
@@ -188,23 +188,23 @@ class Scintillator(IDetector):
         threshold = photo_csc/total_csc #eventually this will approach 1 for low energy photons -> guaranteeing that comptonscatters will end with a photoelectri absorption (but also there's the probability of escaping which isn't considered here)
         random = np.random.rand()
         interaction_threshold = np.random.rand()
-        if d1< d2:
-            if d1 < dc1 or d1 <dc2:
+        if d1 < d2 and d1 > 0: #checking greater than 0 since a negative distance means the vector is projecting backwards
+            if d1 < dc1 and dc1 > 0 or d1 < dc2 and dc2 > 0:
                 dist = d1
                 #p = p1_cyl
             else:
-                if dc1 < dc2:
+                if dc1 < dc2 and dc1 > 0:
                     dist = dc1
                     #p = p1_cap
                 else:
                     dist = dc2
                     #p = p2_cap
         else:
-            if d2 < dc1 or d2 <dc2:
+            if d2 < dc1 and dc1 > 0 or d2 < dc2 and dc2 > 0:
                 dist = d2
                 #p = p2_cyl
             else:
-                if dc1 < dc2:
+                if dc1 < dc2 and dc1 > 0:
                     dist = dc1
                     #p = p1_cap
                 else:

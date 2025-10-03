@@ -40,7 +40,7 @@ class Positions2d(QWidget): #Window for displaying positional graph
                                                             #ITS OFFSET BY 180 DEGREES NOOO BUT I DONT WANT TO TAKE 180 FROM EACH THING IF THEYRE OVER 180
         self.layout = QVBoxLayout()
         self.plotWidget = pg.PlotWidget(title = "Total detections")
-        self.scatter = pg.ScatterPlotItem(size = 5, brush=pg.mkBrush(255, 255, 255, 120))
+        self.scatter = pg.ScatterPlotItem(size = 5, brush=pg.mkBrush(255, 255, 255, 40))
         self.scatter.addPoints(self.polar_positions[:, 0], self.polar_positions[:,1])
         #self.plotWidget.scatterPlot(self.polar_positions)
         self.plotWidget.addItem(self.scatter)
