@@ -33,15 +33,30 @@ class SimWorker(QObject):
         self.finished.emit(*result)
 
 class Positions2d(QWidget): #Window for displaying positional graph
-    def __init__(self, parent, polar_positions):
+    def __init__(self, parent, polarpositions):
         super(Positions2d, self).__init__(parent=None)
         self.parent = parent
-        self.polar_positions = polar_positions[0]*180/np.pi #Just the first detector for nyow
-                                                            #ITS OFFSET BY 180 DEGREES NOOO BUT I DONT WANT TO TAKE 180 FROM EACH THING IF THEYRE OVER 180
+        self.det1 = polarpositions["det0"]*180/np.pi
+
+        if len(polarpositions) == 2:
+            self.det2 = polarpositions["det1"]*180/np.pi
+        elif len(polarpositions) == 3:
+            self.det2 = polarpositions["det1"]*180/np.pi
+            self.det3 = polarpositions["det2"]*180/np.pi
+        elif len(polarpositions) == 4:
+            self.det2 = polarpositions["det1"]*180/np.pi
+            self.det3 = polarpositions["det2"]*180/np.pi
+            self.det4 = polarpositions["det3"]*180/np.pi
         self.layout = QVBoxLayout()
         self.plotWidget = pg.PlotWidget(title = "Total detections")
         self.scatter = pg.ScatterPlotItem(size = 5, brush=pg.mkBrush(255, 255, 255, 40))
-        self.scatter.addPoints(self.polar_positions[:, 0], self.polar_positions[:,1])
+        self.scatter.addPoints(self.det1[:,0], self.det1[:,1])
+        if len(polarpositions) == 2:
+            self.scatter.addPoints(self.det2[:,0], self.det2[:,1])
+        if len(polarpositions) == 3:
+            self.scatter.addPoints(self.det3[:,0], self.det3[:,1])
+        if len(polarpositions) == 4:
+            self.scatter.addPoints(self.det4[:,0], self.det4[:,1]) # there's definitely a better way to do this but whatever
         #self.plotWidget.scatterPlot(self.polar_positions)
         self.plotWidget.addItem(self.scatter)
         self.plotWidget.show()
@@ -436,7 +451,7 @@ class MainWindow(QMainWindow):
         self.progress_timer.timeout.connect(self.poll_progress)
 
     def show_positions(self): #For creating a new window for a graph
-        self.pos_window = Positions2d(self, self.polar_positions)
+        self.pos_window = Positions2d(self, self.polarpositions)
         self.pos_window.show()
 
     def n_photons_drop(self, n):
@@ -576,7 +591,9 @@ class MainWindow(QMainWindow):
             f = open("logs"+str(idx)+".csv", "w") #will need to prevent the user from calling their generated file "logs"
             f.write("\n".join(str(e) for e in energies[idx-1]) + "\n")
             f.close()
-        self.polar_positions = np.array(polar_positions)
+        self.polarpositions = dict()
+        for i in range(len(polar_positions)):
+            self.polarpositions["det" + str(i)] = np.array(polar_positions[i])
         #fig = backend.plot_spectra(energies, bins=1024, energy_range=(0, 1024))#removed calling config so that it can be easier edited at this point by the user
         self.display_fig(energies)
         self.running = False
