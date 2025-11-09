@@ -47,32 +47,26 @@ class Positions2d(QWidget): #Window for displaying positional graph
             self.det2 = polarpositions["det1"]*180/np.pi
             self.det3 = polarpositions["det2"]*180/np.pi
             self.det4 = polarpositions["det3"]*180/np.pi
-        self.layout = QVBoxLayout()
-        self.plotWidget = pg.PlotWidget(title = "Total detections")
-        self.scatter = pg.ScatterPlotItem(size = 5, brush=pg.mkBrush(255, 255, 255, 40))
-        self.scatter.addPoints(self.det1[:,0], self.det1[:,1])
+        #self.layout = QVBoxLayout()
+        self.plot = pg.PlotItem()
+        self.plot.setLabel(axis='left', text='Phi+90')
+        self.plot.setLabel(axis='bottom', text='Theta+180')
+        self.imv = pg.ImageView(view=self.plot)
+        self.imv.view.invertY(False)
+        pixmap = np.zeros((360,180))
+        for i in range(len(self.det1)):
+            pixmap[round(self.det1[i,0])+90, round(self.det1[i,1])+90] += 1 #do i need to +180 to theta?
         if len(polarpositions) == 2:
-            self.scatter.addPoints(self.det2[:,0], self.det2[:,1])
+            for i in range(len(self.det2)):
+                pixmap[round(self.det2[i,0])+90, round(self.det2[i,1])+90] += 1
         if len(polarpositions) == 3:
-            self.scatter.addPoints(self.det3[:,0], self.det3[:,1])
+            for i in range(len(self.det3)):
+                pixmap[round(self.det3[i,0]+90), round(self.det3[i,1])+90] += 1
         if len(polarpositions) == 4:
-            self.scatter.addPoints(self.det4[:,0], self.det4[:,1]) # there's definitely a better way to do this but whatever
-        #self.plotWidget.scatterPlot(self.polar_positions)
-        self.plotWidget.addItem(self.scatter)
-        self.plotWidget.show()
-        # self.imv = pg.ImageView(view = pg.PlotItem())
-        # self.imv.show()
-        # resolution = 512
-        # min_X = -180
-        # max_X = 180
-        # bins = np.linspace(min_X, max_X, resolution + 1)
-        # X_binned = np.digitize(self.polar_positions, bins) - 1
-        # print(np.shape(self.polar_positions)) #WHY DOES IT THINK THE X COORDINATE (or Y for transpose) IS THE LENGTH OF THE ARRAY???
-        # images = np.zeros((X_binned.shape[0], resolution, resolution, 1), dtype=np.uint8)
-        # images[np.ix_(np.arange(self.polar_positions[0]), *X_binned,T, [0])] = 1
-        # self.data = images
-        # self.imv.setImage(img = self.data)
-        self.layout.addWidget(self.plotWidget)
+            for i in range(len(self.det4)):
+                pixmap[round(self.det4[i,0]+90), round(self.det4[i,1])+90] += 1
+        self.imv.setImage(pixmap)
+        self.imv.show()
 
 class Detector(QWidget): #Window to add new detectors
     def __init__(self, parent):
